@@ -196,6 +196,7 @@ namespace WSDKTest
             var roll = 0;
             var pitch = 0;
             var yaw = 0;
+            mission_state = -1;
 
             try
             {
@@ -233,10 +234,8 @@ namespace WSDKTest
         static double X_offset = 0;
         static double WP_tolarence = 0.15;
         static double max_speed = 1.0f;
-        static double rawX;
-        static double rawY;
-        static double rawZ;
-
+        static float progressionYaw;
+        static double angle_remain;
 
         struct position
         {
@@ -248,11 +247,20 @@ namespace WSDKTest
             {
                 return Math.Sqrt((x - target.x) * (x - target.x) + (y - target.y) * (y - target.y));
             }
+            public void updateYaw(position lastWP)
+            {
+                int sign = 1;
+                if (x - lastWP.x >= 0)
+                    sign = 1;
+                else if (x - lastWP.x < 0)
+                    sign = -1;
+                compassBoundary(Math.Round(Math.Tan(toRadian((x - lastWP.x) / (y - lastWP.y))), 1));
+            }
         }
         static position current2Dpostion;
         static position[] myWP = new position[10];
 
-        public double toRadian(double angle)
+        public static double toRadian(double angle)
         {
             return (Math.PI / 180) * angle;
         }
@@ -606,9 +614,6 @@ namespace WSDKTest
             if (value.HasValue)
             {
                 //System.Diagnostics.Debug.WriteLine("DoublePoint3D updated");
-                rawX = value.Value.x;
-                rawY = value.Value.y;
-                rawZ = value.Value.z;
                 N_position = value.Value.x;
                 E_position = value.Value.y;
                 D_position = value.Value.z;
@@ -625,6 +630,7 @@ namespace WSDKTest
 
         private static double compassBoundary(double compassValue)
         {
+            compassValue %= 360.0f;
             if (compassValue > 180)
             {
                 return -(360.0f - compassValue);
@@ -680,6 +686,7 @@ namespace WSDKTest
                         {
                             System.Diagnostics.Debug.WriteLine("WP1 arrived");
                             attitude_control(0, 0, 0, 0);
+                            myWP[2].updateYaw(current2Dpostion);
                             System.Diagnostics.Debug.WriteLine("Rotating...");
                             attitude_control(0, 0, 0, 0.5f);
                             mission_state++;                            
@@ -692,21 +699,22 @@ namespace WSDKTest
                     }
                 case 3:
                     {
-                        if (Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation)) <= 1.0)
+                        angle_remain = Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation));
+                        if (angle_remain <= 1.0)
                         {
                             System.Diagnostics.Debug.WriteLine("Rotation completed");
                             attitude_control(0, 0, 0.5f, 0);
                             mission_state++;
                         }
-                        else if(Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation)) <= 10.0f)
+                        else if(angle_remain <= 10.0f)
                         {
-                            float progressionYaw = 0.2f * Convert.ToSingle(Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation) / 10.0f));
+                            progressionYaw = Convert.ToSingle(0.2f * angle_remain / 10.0f);
                             attitude_control(0, 0, 0, progressionYaw);
-                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation)));
+                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", angle_remain);
                         }
                         else
                         {
-                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation)));
+                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", angle_remain);
                         }
                         break;
                     }
@@ -720,6 +728,8 @@ namespace WSDKTest
                         else
                         {
                             System.Diagnostics.Debug.WriteLine("Flying to WP2, distance = {0}", myWP[2].compare(current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("current postion {0}, {1}", current2Dpostion.x, current2Dpostion.y);
+                            System.Diagnostics.Debug.WriteLine("target postion {0}, {1}", myWP[2].x, myWP[2].y);
                         }
                         break;
                     }
@@ -788,7 +798,10 @@ namespace WSDKTest
                         break;
                     }
                 default:
-                    break;
+                    {
+                        System.Diagnostics.Debug.WriteLine("Mission Inpterrupted");
+                        break;
+                    }
             }
         }
     }
