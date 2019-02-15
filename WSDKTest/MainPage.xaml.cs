@@ -706,7 +706,6 @@ namespace WSDKTest
                         }
                         else
                         {
-                            //
                             System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation)));
                         }
                         break;
