@@ -192,10 +192,10 @@ namespace WSDKTest
 
         private void Stop_Button_Click(object sender, RoutedEventArgs e)
         {
-            var throttle = 0;
-            var roll = 0;
-            var pitch = 0;
-            var yaw = 0;
+            throttle = 0;
+            roll = 0;
+            pitch = 0;
+            yaw = 0;
             mission_state = -1;
 
             try
@@ -209,10 +209,10 @@ namespace WSDKTest
             }
         }
 
-        private float throttle = 0;
-        private float roll = 0;
-        private float pitch = 0;
-        private float yaw = 0;
+        private static float throttle = 0;
+        private static float roll = 0;
+        private static float pitch = 0;
+        private static float yaw = 0;
 
         //custom var
         private static System.Timers.Timer TimerAsync;
@@ -247,14 +247,22 @@ namespace WSDKTest
             {
                 return Math.Sqrt((x - target.x) * (x - target.x) + (y - target.y) * (y - target.y));
             }
-            public void updateYaw(position lastWP)
+            public void updateYaw(position currentWP)
             {
                 int sign = 1;
-                if (x - lastWP.x >= 0)
+                if (x - currentWP.x >= 0)          //to rightward
                     sign = 1;
-                else if (x - lastWP.x < 0)
+                else if (x - currentWP.x < 0)      //to left
                     sign = -1;
-                compassBoundary(Math.Round(Math.Tan(toRadian((x - lastWP.x) / (y - lastWP.y))), 1));
+                if (y - currentWP.y < 0)           //to backward
+                {
+                    rotation = 90.0 + sign * compassBoundary(Math.Round(Math.Tan(toRadian((x - currentWP.x) / (y - currentWP.y))), 1));
+                }
+                else                            //to forward
+                {
+                    rotation = sign * compassBoundary(Math.Round(Math.Tan(toRadian((x - currentWP.x) / (y - currentWP.y))), 1));
+                }
+                System.Diagnostics.Debug.WriteLine("sign ={0}", sign);
             }
         }
         static position current2Dpostion;
@@ -671,7 +679,7 @@ namespace WSDKTest
                         {
                             //System.Diagnostics.Debug.WriteLine("Take off completed");
                             System.Diagnostics.Debug.WriteLine("Rolling...");
-                            attitude_control(0, 0.5f, 0, 0);
+                            roll = 0.5f;
                             mission_state++;
                         }
                         else
@@ -685,10 +693,13 @@ namespace WSDKTest
                         if (myWP[1].compare(current2Dpostion) <= myWP[1].tolarence)
                         {
                             System.Diagnostics.Debug.WriteLine("WP1 arrived");
-                            attitude_control(0, 0, 0, 0);
+                            roll = 0;
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
                             myWP[2].updateYaw(current2Dpostion);
+                            System.Diagnostics.Debug.WriteLine("WP[2] yaw updated to {0}", myWP[2].rotation);
+
                             System.Diagnostics.Debug.WriteLine("Rotating...");
-                            attitude_control(0, 0, 0, 0.5f);
+                            yaw = 0.5f;
                             mission_state++;                            
                         }
                         else
@@ -703,13 +714,13 @@ namespace WSDKTest
                         if (angle_remain <= 1.0)
                         {
                             System.Diagnostics.Debug.WriteLine("Rotation completed");
-                            attitude_control(0, 0, 0.5f, 0);
+                            pitch = 0.5f;
                             mission_state++;
                         }
                         else if(angle_remain <= 10.0f)
                         {
                             progressionYaw = Convert.ToSingle(0.2f * angle_remain / 10.0f);
-                            attitude_control(0, 0, 0, progressionYaw);
+                            yaw = progressionYaw;
                             System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", angle_remain);
                         }
                         else
@@ -774,7 +785,7 @@ namespace WSDKTest
                 case 5:
                     {
                         System.Diagnostics.Debug.WriteLine("Rolling...");
-                        attitude_control(0, 0.5f, 0, 0);
+                        roll = 0.5f;
                         mission_state++;
                         break;
                     }
@@ -783,7 +794,7 @@ namespace WSDKTest
                         if (myWP[3].compare(current2Dpostion) <= myWP[2].tolarence)
                         {
                             System.Diagnostics.Debug.WriteLine("WP3 arrived");
-                            attitude_control(0, 0, 0);      //don't care yaw
+                            roll = 0;
                             mission_state++;
                         }
                         else
@@ -803,6 +814,8 @@ namespace WSDKTest
                         break;
                     }
             }
+            if (DJISDKManager.Instance != null)
+                DJISDKManager.Instance.VirtualRemoteController.UpdateJoystickValue(throttle, yaw, pitch, roll);
         }
     }
 }
