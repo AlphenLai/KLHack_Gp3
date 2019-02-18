@@ -299,6 +299,9 @@ namespace WSDKTest
             myWP[3].y = myWP[2].y - 1.0f * Math.Sin(toRadian(180 + local_heading));
             myWP[3].rotation = compassBoundary(180.0f + local_heading);
             myWP[3].tolarence = WP_tolarence;
+
+            for (int i = 0; i < myWP.Length; i++)
+                System.Diagnostics.Debug.WriteLine("WP[{0}] {1} {2} {3}", i, myWP[i].x, myWP[i].y, myWP[i].rotation);
         }
 
         private async void Grid_KeyUp(object sender, KeyRoutedEventArgs e)
@@ -670,7 +673,7 @@ namespace WSDKTest
             System.Diagnostics.Debug.WriteLine("Current State: {0}", mission_state);
             switch (mission_state)
             {
-                case 0:
+                case 0:     //take off
                     {
                         System.Diagnostics.Debug.WriteLine("Taking off...");
                         takeoffstarttime = DateTime.Now;
@@ -678,7 +681,7 @@ namespace WSDKTest
                         mission_state++;
                         break;
                     }
-                case 1:
+                case 1:     //roll
                     {
                         if (currentAltitude >= 1.1)
                         {
@@ -693,15 +696,13 @@ namespace WSDKTest
                         }
                         break;
                     }
-                case 2:
+                case 2:     //go to WP1
                     {
                         if (myWP[1].compare(current2Dpostion) <= myWP[1].tolarence)
                         {
                             System.Diagnostics.Debug.WriteLine("WP1 arrived");
                             roll = 0;
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
-                            myWP[2].updateYaw(current2Dpostion);
-                            System.Diagnostics.Debug.WriteLine("WP[2] yaw updated to {0}", myWP[2].rotation);
 
                             System.Diagnostics.Debug.WriteLine("Rotating...");
                             yaw = 0.5f;
@@ -713,7 +714,7 @@ namespace WSDKTest
                         }
                         break;
                     }
-                case 3:
+                case 3:     //rotate to new rotation
                     {
                         angle_remain = Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation));
                         if (angle_remain <= angle_tolarence)
@@ -735,15 +736,13 @@ namespace WSDKTest
                         }
                         break;
                     }
-                case 4:
+                case 4:     //go to WP2
                     {
                         if (myWP[2].compare(current2Dpostion) <= myWP[2].tolarence)
                         {
                             System.Diagnostics.Debug.WriteLine("WP2 arrived");
                             pitch = 0;
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
-                            myWP[3].updateYaw(current2Dpostion);
-                            System.Diagnostics.Debug.WriteLine("WP[3] yaw updated to {0}", myWP[3].rotation);
 
                             System.Diagnostics.Debug.WriteLine("Rotating...");
                             yaw = 0.5f;
@@ -757,7 +756,7 @@ namespace WSDKTest
                         }
                         break;
                     }
-                case 5:
+                case 5:     //rotate to new rotation
                     {
                         angle_remain = Math.Abs(compassBoundary(true_north_heading - myWP[3].rotation));
                         if (angle_remain <= angle_tolarence)
@@ -779,7 +778,7 @@ namespace WSDKTest
                         }
                         break;
                     }
-                case 6:
+                case 6:     //go to WP3
                     {
                         if (myWP[3].compare(current2Dpostion) <= myWP[3].tolarence)
                         {
