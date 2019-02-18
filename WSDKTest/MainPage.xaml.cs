@@ -233,6 +233,7 @@ namespace WSDKTest
         static double Y_offset = 0;
         static double X_offset = 0;
         static double WP_tolarence = 0.15;
+        static double angle_tolarence = 1.0f;
         static double max_speed = 1.0f;
         static float progressionYaw;
         static double angle_remain;
@@ -256,13 +257,12 @@ namespace WSDKTest
                     sign = -1;
                 if (y - currentWP.y < 0)           //to backward
                 {
-                    rotation = 90.0 + sign * compassBoundary(Math.Round(Math.Tan(toRadian((x - currentWP.x) / (y - currentWP.y))), 1));
+                    rotation = 90.0 + sign * compassBoundary(Math.Round(toDegree(Math.Atan((x - currentWP.x) / (y - currentWP.y))), 1));
                 }
                 else                            //to forward
                 {
-                    rotation = sign * compassBoundary(Math.Round(Math.Tan(toRadian((x - currentWP.x) / (y - currentWP.y))), 1));
+                    rotation = sign * compassBoundary(Math.Round(toDegree(Math.Atan((x - currentWP.x) / (y - currentWP.y))), 1));
                 }
-                System.Diagnostics.Debug.WriteLine("sign ={0}", sign);
             }
         }
         static position current2Dpostion;
@@ -271,6 +271,11 @@ namespace WSDKTest
         public static double toRadian(double angle)
         {
             return (Math.PI / 180) * angle;
+        }
+
+        public static double toDegree(double rad)
+        {
+            return rad * (180.0 / Math.PI);
         }
 
         private void setWP()
@@ -711,9 +716,10 @@ namespace WSDKTest
                 case 3:
                     {
                         angle_remain = Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation));
-                        if (angle_remain <= 1.0)
+                        if (angle_remain <= angle_tolarence)
                         {
                             System.Diagnostics.Debug.WriteLine("Rotation completed");
+                            System.Diagnostics.Debug.WriteLine("Pitching...");
                             pitch = 0.5f;
                             mission_state++;
                         }
@@ -734,6 +740,13 @@ namespace WSDKTest
                         if (myWP[2].compare(current2Dpostion) <= myWP[2].tolarence)
                         {
                             System.Diagnostics.Debug.WriteLine("WP2 arrived");
+                            pitch = 0;
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
+                            myWP[3].updateYaw(current2Dpostion);
+                            System.Diagnostics.Debug.WriteLine("WP[3] yaw updated to {0}", myWP[3].rotation);
+
+                            System.Diagnostics.Debug.WriteLine("Rotating...");
+                            yaw = 0.5f;
                             mission_state++;
                         }
                         else
@@ -744,54 +757,31 @@ namespace WSDKTest
                         }
                         break;
                     }
-                case 3000:          //preserved for pich and yaw
-                    {
-                        System.Diagnostics.Debug.WriteLine("Pitching...");
-                        System.Diagnostics.Debug.WriteLine("Rotating...");
-                        attitude_control(0, 0, -0.5f, 1);
-                        mission_state++;
-                        break;
-                    }
-                case 4000:          //preserved
-                    {
-                        if ((Math.Abs(N_position - myWP[2].y) <= 0.05) && (Math.Abs(E_position - myWP[2].x) <= 0.05))
-                        {
-                            System.Diagnostics.Debug.WriteLine("WP2 arrived");
-                            attitude_control(0, 0, 0);      //don't care yaw
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine("Flying to WP2");
-                        }
-
-                        if(Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation)) <= 0.1)
-                        {
-                            System.Diagnostics.Debug.WriteLine("Rotation completed");
-                            attitude_control(yaw:0);        //don't care !yaw
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine("Rotating...");
-                        }
-
-                        //all conditions fullfilled
-                        if((N_position - myWP[2].y <= 0.05) && (E_position - myWP[2].x <= 0.05) && (true_north_heading - myWP[2].rotation <= 0.1))
-                        {
-                            attitude_control(0, 0, 0, 0);
-                            mission_state++;
-                        }
-                        break;
-                    }
                 case 5:
                     {
-                        System.Diagnostics.Debug.WriteLine("Rolling...");
-                        roll = 0.5f;
-                        mission_state++;
+                        angle_remain = Math.Abs(compassBoundary(true_north_heading - myWP[3].rotation));
+                        if (angle_remain <= angle_tolarence)
+                        {
+                            System.Diagnostics.Debug.WriteLine("Rotation completed");
+                            System.Diagnostics.Debug.WriteLine("Rolling...");
+                            roll = 0.5f;
+                            mission_state++;
+                        }
+                        else if (angle_remain <= 10.0f)
+                        {
+                            progressionYaw = Convert.ToSingle(0.2f * angle_remain / 10.0f);
+                            yaw = progressionYaw;
+                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", angle_remain);
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", angle_remain);
+                        }
                         break;
                     }
                 case 6:
                     {
-                        if (myWP[3].compare(current2Dpostion) <= myWP[2].tolarence)
+                        if (myWP[3].compare(current2Dpostion) <= myWP[3].tolarence)
                         {
                             System.Diagnostics.Debug.WriteLine("WP3 arrived");
                             roll = 0;
@@ -805,7 +795,7 @@ namespace WSDKTest
                     }
                 case 7:
                     {
-                        System.Diagnostics.Debug.WriteLine("Mission Completed.Press H to land");
+                        System.Diagnostics.Debug.WriteLine("Mission Completed. Press H to land");
                         break;
                     }
                 default:
