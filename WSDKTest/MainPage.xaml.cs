@@ -232,8 +232,9 @@ namespace WSDKTest
         static double D_position;
         static double Y_offset = 0;
         static double X_offset = 0;
-        static double WP_tolarence = 0.15;
-        static double angle_tolarence = 1.0f;
+        static double WP_tolarence = 0.15f;
+        static double angle_tolarence = 0.2f;
+        static double max_adj_speed = 1.0f;
         static double max_speed = 1.0f;
         static float progressionYaw;
         static double angle_remain;
@@ -248,21 +249,28 @@ namespace WSDKTest
             {
                 return Math.Sqrt((x - target.x) * (x - target.x) + (y - target.y) * (y - target.y));
             }
-            public void updateYaw(position currentWP)
+            public void updateYaw(position currentPos)
             {
                 int sign = 1;
-                if (x - currentWP.x >= 0)          //to rightward
+                if (x - currentPos.x >= 0)          //to rightward
                     sign = 1;
-                else if (x - currentWP.x < 0)      //to left
+                else if (x - currentPos.x < 0)      //to left
                     sign = -1;
-                if (y - currentWP.y < 0)           //to backward
+                if (y - currentPos.y < 0)           //to backward
                 {
-                    rotation = 90.0 + sign * compassBoundary(Math.Round(toDegree(Math.Atan((x - currentWP.x) / (y - currentWP.y))), 1));
+                    rotation = 90.0 + sign * compassBoundary(Math.Round(toDegree(Math.Atan((x - currentPos.x) / (y - currentPos.y))), 1));
                 }
                 else                            //to forward
                 {
-                    rotation = sign * compassBoundary(Math.Round(toDegree(Math.Atan((x - currentWP.x) / (y - currentWP.y))), 1));
+                    rotation = sign * compassBoundary(Math.Round(toDegree(Math.Atan((x - currentPos.x) / (y - currentPos.y))), 1));
                 }
+            }
+
+            public double offsetFromPath(position lastWP, position currentPos)
+            {
+                //return the distance between current position and the line alone last and next waypoint
+                //-ve = LHS, +ve = RHS
+                return ((y - lastWP.y) * currentPos.x - (x - lastWP.x) * currentPos.y + x * lastWP.y - y * lastWP.x) / Math.Sqrt((y - lastWP.y) * (y - lastWP.y) + (x - lastWP.x) * (x - lastWP.x));
             }
         }
         static position current2Dpostion;
@@ -705,35 +713,43 @@ namespace WSDKTest
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
 
                             System.Diagnostics.Debug.WriteLine("Rotating...");
+                            pitch = 0;
                             yaw = 0.5f;
                             mission_state++;                            
                         }
                         else
                         {
+                            pitch = -Convert.ToSingle(max_adj_speed * myWP[1].offsetFromPath(myWP[0], current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Flying to WP1, distance = {0}", myWP[1].compare(current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[1].offsetFromPath(myWP[0], current2Dpostion));
                         }
                         break;
                     }
                 case 3:     //rotate to new rotation
                     {
-                        angle_remain = Math.Abs(compassBoundary(true_north_heading - myWP[2].rotation));
-                        if (angle_remain <= angle_tolarence)
+                        angle_remain = -compassBoundary(true_north_heading - myWP[2].rotation);
+                        if ((angle_remain <= angle_tolarence) && (angle_remain >= -angle_tolarence)) 
                         {
                             System.Diagnostics.Debug.WriteLine("Rotation completed");
                             System.Diagnostics.Debug.WriteLine("Pitching...");
                             pitch = 0.5f;
                             mission_state++;
                         }
-                        else if(angle_remain <= 10.0f)
+                        else if( Math.Abs(angle_remain) <= 10.0f)
                         {
-                            progressionYaw = Convert.ToSingle(0.2f * angle_remain / 10.0f);
+                            progressionYaw = Convert.ToSingle((0.2f * angle_remain / 5.0f) + Math.Sign(angle_remain) * 0.1);
                             yaw = progressionYaw;
-                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", angle_remain);
+                            if ( (angle_remain < 0) && (yaw > 0) )
+                                yaw *= -1;
+                            else if((angle_remain > 0) && (yaw <= 0))
+                                yaw *= -1;
+                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree2 left", angle_remain);
                         }
                         else
                         {
                             System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", angle_remain);
                         }
+                        System.Diagnostics.Debug.WriteLine("YAW ={0}", yaw);
                         break;
                     }
                 case 4:     //go to WP2
@@ -742,43 +758,25 @@ namespace WSDKTest
                         {
                             System.Diagnostics.Debug.WriteLine("WP2 arrived");
                             pitch = 0;
+                            System.Diagnostics.Debug.WriteLine("Rolling...");
+                            //roll = 0.5f;
+                            attitude_control();
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
-
-                            System.Diagnostics.Debug.WriteLine("Rotating...");
-                            yaw = 0.5f;
-                            mission_state++;
+                            //mission_state++;
                         }
                         else
                         {
+                            roll = -Convert.ToSingle(max_adj_speed * myWP[2].offsetFromPath(myWP[1], current2Dpostion));
+
+                            System.Diagnostics.Debug.WriteLine("Offset ={0}, speed ={1}, single ={2}, roll ={3}", myWP[2].offsetFromPath(myWP[1], current2Dpostion), max_adj_speed * myWP[2].offsetFromPath(myWP[1], current2Dpostion), Convert.ToSingle(max_adj_speed * myWP[2].offsetFromPath(myWP[1], current2Dpostion)), roll);
                             System.Diagnostics.Debug.WriteLine("Flying to WP2, distance = {0}", myWP[2].compare(current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[2].offsetFromPath(myWP[1], current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("current postion {0}, {1}", current2Dpostion.x, current2Dpostion.y);
                             System.Diagnostics.Debug.WriteLine("target postion {0}, {1}", myWP[2].x, myWP[2].y);
                         }
                         break;
                     }
-                case 5:     //rotate to new rotation
-                    {
-                        angle_remain = Math.Abs(compassBoundary(true_north_heading - myWP[3].rotation));
-                        if (angle_remain <= angle_tolarence)
-                        {
-                            System.Diagnostics.Debug.WriteLine("Rotation completed");
-                            System.Diagnostics.Debug.WriteLine("Rolling...");
-                            roll = 0.5f;
-                            mission_state++;
-                        }
-                        else if (angle_remain <= 10.0f)
-                        {
-                            progressionYaw = Convert.ToSingle(0.2f * angle_remain / 10.0f);
-                            yaw = progressionYaw;
-                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", angle_remain);
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", angle_remain);
-                        }
-                        break;
-                    }
-                case 6:     //go to WP3
+                case 5:     //go to WP3
                     {
                         if (myWP[3].compare(current2Dpostion) <= myWP[3].tolarence)
                         {
@@ -788,11 +786,13 @@ namespace WSDKTest
                         }
                         else
                         {
+                            pitch = -Convert.ToSingle(max_adj_speed * myWP[3].offsetFromPath(myWP[2], current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Flying to WP3, distance = {0}", myWP[3].compare(current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[3].offsetFromPath(myWP[2], current2Dpostion));
                         }
                         break;
                     }
-                case 7:
+                case 6:
                     {
                         System.Diagnostics.Debug.WriteLine("Mission Completed. Press H to land");
                         break;
