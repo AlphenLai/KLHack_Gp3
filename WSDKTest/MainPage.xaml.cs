@@ -234,8 +234,8 @@ namespace WSDKTest
         static double X_offset = 0;
         static double WP_tolarence = 0.15f;
         static double angle_tolarence = 0.2f;
-        static double max_adj_speed = 1.0f;
-        static double max_speed = 1.0f;
+        static float max_yaw_speed = 1.0f;
+        static float max_speed = 0.5f;
         static float progressionYaw;
         static double angle_remain;
         static int currentWP = 0;
@@ -287,17 +287,19 @@ namespace WSDKTest
             double derivative;
             double max_in;
             double last_error;
+            float max_output;
 
-            public PID(double p, double i, double d) : this()
+            public PID(double p, double i, double d, float speed) : this()
             {
-                this.Kp = p;
-                this.Ki = i;
-                this.Kd = d;
+                Kp = p;
+                Ki = i;
+                Kd = d;
 
-                this.integral = 0;
-                this.derivative = 0;
-                this.max_in = 0;
-                this.last_error = 0;
+                integral = 0;
+                derivative = 0;
+                max_in = 0;
+                last_error = 0;
+                max_output = speed;
             }
             public float get(double error)
             {
@@ -308,7 +310,14 @@ namespace WSDKTest
                     integral = -max_in;
                 derivative = error - last_error;
                 last_error = error;
-                return Convert.ToSingle(Kp * error + (1 / Ki) * integral + Kd * derivative);
+
+                float output = Convert.ToSingle(Kp * error + (1 / Ki) * integral + Kd * derivative);
+                if (output >= max_output)
+                    return max_output;
+                else if (output <= -max_output)
+                    return -max_output;
+                else
+                    return output;
             }
             public void tune(double p, double i, double d)
             {
@@ -318,9 +327,9 @@ namespace WSDKTest
             }
         }
 
-        static PID rollPID = new PID(1, 0, 0);
-        static PID pitchPID = new PID(1, 0, 0);
-        static PID yawPID = new PID(1, 0, 0);
+        static PID rollPID = new PID(1.5, 1, 1, max_speed);
+        static PID pitchPID = new PID(1.5, 1, 1, max_speed);
+        static PID yawPID = new PID(1.5, 1, 0.3, max_yaw_speed);
 
         public static double toRadian(double angle)
         {
@@ -739,7 +748,7 @@ namespace WSDKTest
                     {
                         if (currentAltitude >= 1.1)
                         {
-                            //System.Diagnostics.Debug.WriteLine("Take off completed");
+                            System.Diagnostics.Debug.WriteLine("Take off completed");
                             System.Diagnostics.Debug.WriteLine("Rolling...");
                             roll = 0.5f;
                             mission_state++;
@@ -765,7 +774,7 @@ namespace WSDKTest
                         }
                         else
                         {
-                            pitch = -Convert.ToSingle(max_adj_speed * myWP[1].offsetFromPath(myWP[0], current2Dpostion));
+                            pitch = pitchPID.get(myWP[1].offsetFromPath(myWP[0], current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Flying to WP1, distance = {0}", myWP[1].compare(current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[1].offsetFromPath(myWP[0], current2Dpostion));
                         }
@@ -812,9 +821,7 @@ namespace WSDKTest
                         }
                         else
                         {
-                            roll = -Convert.ToSingle(max_adj_speed * myWP[2].offsetFromPath(myWP[1], current2Dpostion)*1.5);
 
-                            System.Diagnostics.Debug.WriteLine("Offset ={0}, speed ={1}, single ={2}, roll ={3}", myWP[2].offsetFromPath(myWP[1], current2Dpostion), max_adj_speed * myWP[2].offsetFromPath(myWP[1], current2Dpostion), Convert.ToSingle(max_adj_speed * myWP[2].offsetFromPath(myWP[1], current2Dpostion)), roll);
                             System.Diagnostics.Debug.WriteLine("Flying to WP2, distance = {0}", myWP[2].compare(current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[2].offsetFromPath(myWP[1], current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("current postion {0}, {1}", current2Dpostion.x, current2Dpostion.y);
@@ -833,7 +840,6 @@ namespace WSDKTest
                         }
                         else
                         {
-                            pitch = -Convert.ToSingle(max_adj_speed * myWP[3].offsetFromPath(myWP[2], current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Flying to WP3, distance = {0}", myWP[3].compare(current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[3].offsetFromPath(myWP[2], current2Dpostion));
                         }
