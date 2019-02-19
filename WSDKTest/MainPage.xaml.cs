@@ -236,9 +236,8 @@ namespace WSDKTest
         static double angle_tolarence = 0.2f;
         static float max_yaw_speed = 1.0f;
         static float max_speed = 0.5f;
-        static float progressionYaw;
         static double angle_remain;
-        static int currentWP = 0;
+        static double hold_rotation = 0;
 
         struct position
         {
@@ -432,6 +431,7 @@ namespace WSDKTest
                             //startTime = DateTime.Now;
                             SetTimer();
                             local_heading = true_north_heading;
+                            hold_rotation = local_heading;
                             Y_offset = current2Dpostion.y;
                             X_offset = current2Dpostion.x;
                             setWP();
@@ -768,8 +768,7 @@ namespace WSDKTest
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
 
                             System.Diagnostics.Debug.WriteLine("Rotating...");
-                            pitch = 0;
-                            yaw = 0.5f;
+                            hold_rotation = myWP[2].rotation;
                             mission_state++;                            
                         }
                         else
@@ -782,24 +781,14 @@ namespace WSDKTest
                     }
                 case 3:     //rotate to new rotation
                     {
-                        angle_remain = -compassBoundary(true_north_heading - myWP[2].rotation);
+                        
+                        angle_remain = -compassBoundary(true_north_heading - hold_rotation);
                         if ((angle_remain <= angle_tolarence) && (angle_remain >= -angle_tolarence)) 
                         {
                             System.Diagnostics.Debug.WriteLine("Rotation completed");
                             System.Diagnostics.Debug.WriteLine("Pitching...");
-                            yaw = 0;
                             pitch = 0.5f;
                             mission_state++;
-                        }
-                        else if( Math.Abs(angle_remain) <= 10.0f)
-                        {
-                            progressionYaw = Convert.ToSingle((0.2f * angle_remain / 5.0f) + Math.Sign(angle_remain) * 0.1);
-                            yaw = progressionYaw;
-                            if ( (angle_remain < 0) && (yaw > 0) )
-                                yaw *= -1;
-                            else if((angle_remain > 0) && (yaw <= 0))
-                                yaw *= -1;
-                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree2 left", angle_remain);
                         }
                         else
                         {
@@ -821,7 +810,7 @@ namespace WSDKTest
                         }
                         else
                         {
-
+                            roll = rollPID.get(myWP[2].offsetFromPath(myWP[1], current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Flying to WP2, distance = {0}", myWP[2].compare(current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[2].offsetFromPath(myWP[1], current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("current postion {0}, {1}", current2Dpostion.x, current2Dpostion.y);
@@ -840,6 +829,7 @@ namespace WSDKTest
                         }
                         else
                         {
+                            pitch = pitchPID.get(myWP[3].offsetFromPath(myWP[2], current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Flying to WP3, distance = {0}", myWP[3].compare(current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[3].offsetFromPath(myWP[2], current2Dpostion));
                         }
@@ -857,8 +847,7 @@ namespace WSDKTest
                     }
             }
             //periodically adjust yaw angle
-            if (myWP[currentWP].rotation != local_heading)
-                yaw = yawPID.get(myWP[currentWP].rotation - local_heading);
+            yaw = yawPID.get(hold_rotation - true_north_heading);
 
             if (DJISDKManager.Instance != null)
                 DJISDKManager.Instance.VirtualRemoteController.UpdateJoystickValue(throttle, yaw, pitch, roll);
