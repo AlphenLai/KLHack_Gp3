@@ -209,6 +209,18 @@ namespace WSDKTest
             }
         }
 
+        private void Apply_Button_Click(object sender, RoutedEventArgs e)
+        {
+            rollPID.tune(Convert.ToDouble(rollP.Text), Convert.ToDouble(rollI.Text), Convert.ToDouble(rollD.Text));
+            pitchPID.tune(Convert.ToDouble(pitchP.Text), Convert.ToDouble(pitchI.Text), Convert.ToDouble(pitchD.Text));
+            yawPID.tune(Convert.ToDouble(yawP.Text), Convert.ToDouble(yawI.Text), Convert.ToDouble(yawD.Text));
+        }
+
+        private void Set_Button_Click(object sender, RoutedEventArgs e)
+        {
+            
+        }
+
         private static float throttle = 0;
         private static float roll = 0;
         private static float pitch = 0;
@@ -339,6 +351,12 @@ namespace WSDKTest
         {
             return rad * (180.0 / Math.PI);
         }
+
+        /*
+        public static position rotationMatrix(position originPlane)
+        {
+            return originPlane;
+        }*/
 
         private void setWP()
         {
@@ -722,6 +740,11 @@ namespace WSDKTest
             {
                 return compassValue;
             }
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+
         }
 
         private static async void state_change(Object source, ElapsedEventArgs e)

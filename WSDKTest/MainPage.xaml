@@ -12,7 +12,7 @@
     <Grid>
         <Grid x:Name="RootGrid">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="8*"/>
+                <ColumnDefinition Width="5*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Border BorderBrush="#2470a0" BorderThickness="3" >
@@ -22,6 +22,87 @@
                 <TextBlock Text="Scanned QRCode:" TextWrapping="Wrap" HorizontalAlignment="Stretch" Margin="0,0,0,0" VerticalAlignment="Stretch"/>
                 <TextBox  x:Name="Textbox" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True"/>
                 <Button Content="STOP" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="Stop_Button_Click">
+                    <Button.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="x" Modifiers="Control" />
+                    </Button.KeyboardAccelerators>
+                </Button>
+
+                <TextBlock  x:Name="Message" TextWrapping="Wrap" Text="Initializing..."/>
+                <TextBlock  x:Name="a0" TextWrapping="Wrap" Text="" Height="50px"/>
+                <TextBlock  x:Name="a" TextWrapping="Wrap" Text="For Debug Only"/>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Row" TextAlignment="Center"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Pitch" TextAlignment="Center"/>
+                    <TextBlock Grid.Row="0" Grid.Column="3" Text="Yaw" TextAlignment="Center"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="P" />
+                    <TextBox x:Name ="rollP" Grid.Row="1" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox x:Name ="rollI" Grid.Row="1" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBox x:Name ="rollD" Grid.Row="1" Grid.Column="3" AcceptsReturn="True"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="I" />
+                    <TextBox x:Name ="pitchP" Grid.Row="2" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox x:Name ="pitchI" Grid.Row="2" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBox x:Name ="pitchD" Grid.Row="2" Grid.Column="3" AcceptsReturn="True"/>
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="D" />
+                    <TextBox x:Name ="yawP" Grid.Row="3" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox x:Name ="yawI" Grid.Row="3" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBox x:Name ="yawD" Grid.Row="3" Grid.Column="3" AcceptsReturn="True"/>
+                </Grid>
+                <Button Content="APPLY" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="Apply_Button_Clicked">
+                    <Button.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="x" Modifiers="Control" />
+                    </Button.KeyboardAccelerators>
+                </Button>
+
+
+                <TextBlock  x:Name="b0" TextWrapping="Wrap" Text="" Height="50px"/>
+                <TextBlock  x:Name="b" TextWrapping="Wrap" Text="Waypoints Tuning"/>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="x" TextAlignment="Center"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="y" TextAlignment="Center"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="WP1" />
+                    <TextBox Grid.Row="1" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox Grid.Row="1" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="WP2" />
+                    <TextBox Grid.Row="2" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox Grid.Row="2" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="WP3" />
+                    <TextBox Grid.Row="3" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox Grid.Row="3" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="WP4" />
+                    <TextBox Grid.Row="4" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox Grid.Row="4" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="WP5" />
+                    <TextBox Grid.Row="5" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox Grid.Row="5" Grid.Column="2" AcceptsReturn="True"/>
+                </Grid>
+                <Button Content="SET" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="Set_Button_Clicked">
                     <Button.KeyboardAccelerators>
                         <KeyboardAccelerator Key="x" Modifiers="Control" />
                     </Button.KeyboardAccelerators>
