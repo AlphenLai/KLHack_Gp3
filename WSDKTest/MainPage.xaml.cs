@@ -214,11 +214,16 @@ namespace WSDKTest
             rollPID.tune(Convert.ToDouble(rollP.Text), Convert.ToDouble(rollI.Text), Convert.ToDouble(rollD.Text));
             pitchPID.tune(Convert.ToDouble(pitchP.Text), Convert.ToDouble(pitchI.Text), Convert.ToDouble(pitchD.Text));
             yawPID.tune(Convert.ToDouble(yawP.Text), Convert.ToDouble(yawI.Text), Convert.ToDouble(yawD.Text));
+            Message.Text = "PID updated";
         }
 
         private void Set_Button_Click(object sender, RoutedEventArgs e)
         {
-            
+            myWP[1] = rotationMatrix(new position(Convert.ToDouble(WP1x.Text), Convert.ToDouble(WP1y.Text)), local_heading);
+            myWP[2] = rotationMatrix(new position(Convert.ToDouble(WP2x.Text), Convert.ToDouble(WP2y.Text)), local_heading);
+            myWP[3] = rotationMatrix(new position(Convert.ToDouble(WP3x.Text), Convert.ToDouble(WP3y.Text)), local_heading);
+            myWP[4] = rotationMatrix(new position(Convert.ToDouble(WP4x.Text), Convert.ToDouble(WP4y.Text)), local_heading);
+            Message.Text = "Waypoints updated";
         }
 
         private static float throttle = 0;
@@ -257,10 +262,20 @@ namespace WSDKTest
             public double y;
             public double rotation;
             public double tolarence;
+
+            public position(double x0, double y0, double rotation0 = 0, double tolarence0 = 1) : this()
+            {
+                x = x0;
+                y = y0;
+                rotation = rotation0;
+                tolarence = tolarence0;
+            }
+
             public double compare(position target)
             {
                 return Math.Sqrt((x - target.x) * (x - target.x) + (y - target.y) * (y - target.y));
             }
+
             public void updateYaw(position currentPos)
             {
                 int sign = 1;
@@ -352,11 +367,13 @@ namespace WSDKTest
             return rad * (180.0 / Math.PI);
         }
 
-        /*
-        public static position rotationMatrix(position originPlane)
+        static position rotationMatrix(position originPlane, double degree)
         {
-            return originPlane;
-        }*/
+            double x0 = Math.Cos(toRadian(degree)) * originPlane.x + -Math.Sin(toRadian(degree)) * originPlane.y;
+            double y0 = Math.Sin(toRadian(degree)) * originPlane.x + Math.Cos(toRadian(degree)) * originPlane.y;
+            position newPlane = new position(x0, y0);
+            return newPlane;
+        }
 
         private void setWP()
         {

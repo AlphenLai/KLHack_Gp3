@@ -28,8 +28,8 @@
                 </Button>
 
                 <TextBlock  x:Name="Message" TextWrapping="Wrap" Text="Initializing..."/>
-                <TextBlock  x:Name="a0" TextWrapping="Wrap" Text="" Height="50px"/>
-                <TextBlock  x:Name="a" TextWrapping="Wrap" Text="For Debug Only"/>
+                <TextBlock  TextWrapping="Wrap" Text="" Height="50px"/>
+                <TextBlock  TextWrapping="Wrap" Text="For Debug Only"/>
 
                 <Grid>
                     <Grid.RowDefinitions>
@@ -60,15 +60,15 @@
                     <TextBox x:Name ="yawI" Grid.Row="3" Grid.Column="2" AcceptsReturn="True"/>
                     <TextBox x:Name ="yawD" Grid.Row="3" Grid.Column="3" AcceptsReturn="True"/>
                 </Grid>
-                <Button Content="APPLY" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="Apply_Button_Clicked">
+                <Button Content="APPLY" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="Apply_Button_Click">
                     <Button.KeyboardAccelerators>
                         <KeyboardAccelerator Key="x" Modifiers="Control" />
                     </Button.KeyboardAccelerators>
                 </Button>
 
 
-                <TextBlock  x:Name="b0" TextWrapping="Wrap" Text="" Height="50px"/>
-                <TextBlock  x:Name="b" TextWrapping="Wrap" Text="Waypoints Tuning"/>
+                <TextBlock TextWrapping="Wrap" Text="" Height="50px"/>
+                <TextBlock TextWrapping="Wrap" Text="Waypoints Tuning"/>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -87,22 +87,22 @@
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="x" TextAlignment="Center"/>
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="y" TextAlignment="Center"/>
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="WP1" />
-                    <TextBox Grid.Row="1" Grid.Column="1" AcceptsReturn="True"/>
-                    <TextBox Grid.Row="1" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBox x:Name="WP1x" Grid.Row="1" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox x:Name="WP1y" Grid.Row="1" Grid.Column="2" AcceptsReturn="True"/>
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="WP2" />
-                    <TextBox Grid.Row="2" Grid.Column="1" AcceptsReturn="True"/>
-                    <TextBox Grid.Row="2" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBox x:Name="WP2x" Grid.Row="2" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox x:Name="WP2y" Grid.Row="2" Grid.Column="2" AcceptsReturn="True"/>
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="WP3" />
-                    <TextBox Grid.Row="3" Grid.Column="1" AcceptsReturn="True"/>
-                    <TextBox Grid.Row="3" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBox x:Name="WP3x" Grid.Row="3" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox x:Name="WP3y" Grid.Row="3" Grid.Column="2" AcceptsReturn="True"/>
                     <TextBlock Grid.Row="4" Grid.Column="0" Text="WP4" />
-                    <TextBox Grid.Row="4" Grid.Column="1" AcceptsReturn="True"/>
-                    <TextBox Grid.Row="4" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBox x:Name="WP4x" Grid.Row="4" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox x:Name="WP4y" Grid.Row="4" Grid.Column="2" AcceptsReturn="True"/>
                     <TextBlock Grid.Row="5" Grid.Column="0" Text="WP5" />
-                    <TextBox Grid.Row="5" Grid.Column="1" AcceptsReturn="True"/>
-                    <TextBox Grid.Row="5" Grid.Column="2" AcceptsReturn="True"/>
+                    <TextBox x:Name="WP5x" Grid.Row="5" Grid.Column="1" AcceptsReturn="True"/>
+                    <TextBox x:Name="WP5y" Grid.Row="5" Grid.Column="2" AcceptsReturn="True"/>
                 </Grid>
-                <Button Content="SET" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="Set_Button_Clicked">
+                <Button Content="SET" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="Set_Button_Click">
                     <Button.KeyboardAccelerators>
                         <KeyboardAccelerator Key="x" Modifiers="Control" />
                     </Button.KeyboardAccelerators>
