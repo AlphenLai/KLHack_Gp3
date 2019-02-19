@@ -732,6 +732,7 @@ namespace WSDKTest
                         {
                             System.Diagnostics.Debug.WriteLine("Rotation completed");
                             System.Diagnostics.Debug.WriteLine("Pitching...");
+                            yaw = 0;
                             pitch = 0.5f;
                             mission_state++;
                         }
@@ -759,14 +760,13 @@ namespace WSDKTest
                             System.Diagnostics.Debug.WriteLine("WP2 arrived");
                             pitch = 0;
                             System.Diagnostics.Debug.WriteLine("Rolling...");
-                            //roll = 0.5f;
-                            attitude_control();
+                            roll = 0.5f;
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
-                            //mission_state++;
+                            mission_state++;
                         }
                         else
                         {
-                            roll = -Convert.ToSingle(max_adj_speed * myWP[2].offsetFromPath(myWP[1], current2Dpostion));
+                            roll = -Convert.ToSingle(max_adj_speed * myWP[2].offsetFromPath(myWP[1], current2Dpostion)*1.5);
 
                             System.Diagnostics.Debug.WriteLine("Offset ={0}, speed ={1}, single ={2}, roll ={3}", myWP[2].offsetFromPath(myWP[1], current2Dpostion), max_adj_speed * myWP[2].offsetFromPath(myWP[1], current2Dpostion), Convert.ToSingle(max_adj_speed * myWP[2].offsetFromPath(myWP[1], current2Dpostion)), roll);
                             System.Diagnostics.Debug.WriteLine("Flying to WP2, distance = {0}", myWP[2].compare(current2Dpostion));
@@ -782,6 +782,7 @@ namespace WSDKTest
                         {
                             System.Diagnostics.Debug.WriteLine("WP3 arrived");
                             roll = 0;
+                            pitch = 0;
                             mission_state++;
                         }
                         else
