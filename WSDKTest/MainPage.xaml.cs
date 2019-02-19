@@ -667,6 +667,39 @@ namespace WSDKTest
             }
         }
 
+        private async void StartRecording(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var error = await DJISDKManager.Instance.ComponentManager.GetCameraHandler(0, 0).StartRecordAsync();
+
+                if (error != SDKError.NO_ERROR)
+                {
+                    System.Diagnostics.Debug.WriteLine(error); ;
+                }
+            }
+            catch (Exception err)
+            {
+                System.Diagnostics.Debug.WriteLine(err);
+            }
+        }
+
+        private async void StopRecording(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var error = await DJISDKManager.Instance.ComponentManager.GetCameraHandler(0, 0).StopRecordAsync();
+                if (error != SDKError.NO_ERROR)
+                {
+                    System.Diagnostics.Debug.WriteLine(error);
+                }
+            }
+            catch (Exception err)
+            {
+                System.Diagnostics.Debug.WriteLine(err);
+            }
+        }
+
         private static void SetTimer()
         {
             // Create a timer with a two second interval.

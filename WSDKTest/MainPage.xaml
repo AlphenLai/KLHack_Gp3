@@ -107,6 +107,16 @@
                         <KeyboardAccelerator Key="x" Modifiers="Control" />
                     </Button.KeyboardAccelerators>
                 </Button>
+                <Button Content="StartRecording" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="StartRecording">
+                    <Button.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="x" Modifiers="Control" />
+                    </Button.KeyboardAccelerators>
+                </Button>
+                <Button Content="StopRecording" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="StopRecording">
+                    <Button.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="x" Modifiers="Control" />
+                    </Button.KeyboardAccelerators>
+                </Button>
             </StackPanel>
         </Grid>
     </Grid>
