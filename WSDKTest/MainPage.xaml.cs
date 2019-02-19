@@ -276,6 +276,40 @@ namespace WSDKTest
         static position current2Dpostion;
         static position[] myWP = new position[10];
 
+        struct PID
+        {
+            double Kp;
+            double Ki;
+            double Kd;
+
+            double integral;
+            double derivative;
+            double max_in;
+            double last_error;
+
+            double get(double error)
+            {
+                integral += error;
+                if (integral >= max_in)
+                    integral = max_in;
+                else if (integral <= (-max_in))
+                    integral = -max_in;
+                derivative = error - last_error;
+                last_error = error;
+                return Kp * error + (1 / Ki) * integral + Kd * derivative;
+            }
+            void tune(double p, double i, double d)
+            {
+                Kp = p;
+                Ki = i;
+                Kd = d;
+            }
+        }
+
+        static PID rollPID = new PID();
+        static PID pitchPID = new PID();
+        static PID yawPID = new PID();
+
         public static double toRadian(double angle)
         {
             return (Math.PI / 180) * angle;
