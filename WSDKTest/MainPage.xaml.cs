@@ -238,6 +238,7 @@ namespace WSDKTest
         static double max_speed = 1.0f;
         static float progressionYaw;
         static double angle_remain;
+        static int currentWP = 0;
 
         struct position
         {
@@ -287,7 +288,18 @@ namespace WSDKTest
             double max_in;
             double last_error;
 
-            double get(double error)
+            public PID(double p, double i, double d) : this()
+            {
+                this.Kp = p;
+                this.Ki = i;
+                this.Kd = d;
+
+                this.integral = 0;
+                this.derivative = 0;
+                this.max_in = 0;
+                this.last_error = 0;
+            }
+            public float get(double error)
             {
                 integral += error;
                 if (integral >= max_in)
@@ -296,9 +308,9 @@ namespace WSDKTest
                     integral = -max_in;
                 derivative = error - last_error;
                 last_error = error;
-                return Kp * error + (1 / Ki) * integral + Kd * derivative;
+                return Convert.ToSingle(Kp * error + (1 / Ki) * integral + Kd * derivative);
             }
-            void tune(double p, double i, double d)
+            public void tune(double p, double i, double d)
             {
                 Kp = p;
                 Ki = i;
@@ -306,9 +318,9 @@ namespace WSDKTest
             }
         }
 
-        static PID rollPID = new PID();
-        static PID pitchPID = new PID();
-        static PID yawPID = new PID();
+        static PID rollPID = new PID(1, 0, 0);
+        static PID pitchPID = new PID(1, 0, 0);
+        static PID yawPID = new PID(1, 0, 0);
 
         public static double toRadian(double angle)
         {
@@ -838,8 +850,13 @@ namespace WSDKTest
                         break;
                     }
             }
+            //periodically adjust yaw angle
+            if (myWP[currentWP].rotation != local_heading)
+                yaw = yawPID.get(myWP[currentWP].rotation - local_heading);
+
             if (DJISDKManager.Instance != null)
                 DJISDKManager.Instance.VirtualRemoteController.UpdateJoystickValue(throttle, yaw, pitch, roll);
+
         }
     }
 }
