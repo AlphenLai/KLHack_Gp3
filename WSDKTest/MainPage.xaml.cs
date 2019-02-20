@@ -74,7 +74,7 @@ namespace WSDKTest
             DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).AltitudeChanged += getAltitudeChanged;
             DJISDKManager.Instance.ComponentManager.GetFlightAssistantHandler(0, 0).AlignedAircraftLocationChanged += getAlignedAircraftLocationChanged;
             //DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).AircraftLocationChanged += getAircraftLocationChanged;
-
+            
         }
 
         void OnVideoPush(VideoFeed sender, [ReadOnlyArray] ref byte[] bytes)
@@ -197,6 +197,7 @@ namespace WSDKTest
             pitch = 0;
             yaw = 0;
             mission_state = -1;
+            script_started = false;
 
             try
             {
@@ -459,10 +460,15 @@ namespace WSDKTest
                             TimerAsync.Dispose();
                         }
                         */
-                        
-                        if (script_started == false)
+
+                        if (current2Dpostion.x == 0 && current2Dpostion.y == 0)
+                        {
+                            Message.Text = "Initialization Failed. Restart the App after connected to drone.";
+                        }
+                        else if (script_started == false)
                         {
                             script_started = true;
+                            mission_state = 0;
                             //startTime = DateTime.Now;
                             SetTimer();
                             local_heading = true_north_heading;
@@ -471,12 +477,6 @@ namespace WSDKTest
                             X_offset = current2Dpostion.x;
                             setWP();
                         }
-                        break;
-                    }
-                case Windows.System.VirtualKey.X:
-                    {
-                        pitch = 0;
-                        yaw = 0;
                         break;
                     }
             }
@@ -790,11 +790,6 @@ namespace WSDKTest
             {
                 return compassValue;
             }
-        }
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-
         }
 
         private static async void state_change(Object source, ElapsedEventArgs e)
