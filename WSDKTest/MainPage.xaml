@@ -117,6 +117,11 @@
                         <KeyboardAccelerator Key="x" Modifiers="Control" />
                     </Button.KeyboardAccelerators>
                 </Button>
+
+                <TextBlock  x:Name="StateBox" TextWrapping="Wrap" Text="Current State: "/>
+                <TextBlock  x:Name="AltitudeBox" TextWrapping="Wrap" Text="Current Altitude: "/>
+                <TextBlock  x:Name="PositionBox" TextWrapping="Wrap" Text="Current Position: "/>
+                <TextBlock  x:Name="RotationBox" TextWrapping="Wrap" Text="Current Heading: "/>
             </StackPanel>
         </Grid>
     </Grid>

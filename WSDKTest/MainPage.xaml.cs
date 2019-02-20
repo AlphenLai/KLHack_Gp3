@@ -137,6 +137,15 @@ namespace WSDKTest
                     //System.Diagnostics.Debug.WriteLine("3D-plane coordinate: x={0}\ty={1}\tz={2}", N_position, E_position, D_position);
                     System.Diagnostics.Debug.WriteLine("2D-plane coordinate: x={0}\ty={1}", current2Dpostion.x, current2Dpostion.y);
 
+                    //Update GUI View
+                    await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                    {
+                        StateBox.Text = "Current State: " + mission_state;
+                        AltitudeBox.Text = "Current Altitude: " + currentAltitude;
+                        PositionBox.Text = "Current Position: " + Math.Round(current2Dpostion.x, 5) + " " + Math.Round(current2Dpostion.y, 5);
+                        RotationBox.Text = "Current Heading: " + true_north_heading;
+                    });
+
                     //run at max 5Hz
                     await Task.Delay(Math.Max(0, 200 - elapsed));
                 }
@@ -467,6 +476,7 @@ namespace WSDKTest
                         }
                         else if (script_started == false)
                         {
+                            Message.Text = "Auto-Mission Starting";
                             script_started = true;
                             mission_state = 0;
                             //startTime = DateTime.Now;
