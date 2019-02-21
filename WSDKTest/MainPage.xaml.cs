@@ -202,7 +202,7 @@ namespace WSDKTest
                 }
                 //Invalidate cache and trigger redraw
                 VideoSource.Invalidate();
-                SaveImage(VideoSource);
+                //SaveImage(VideoSource);
             });
         }
 
@@ -393,7 +393,7 @@ namespace WSDKTest
 
         static PID rollPID = new PID(1.5, 1, 1, max_speed);
         static PID pitchPID = new PID(1.5, 1, 1, max_speed);
-        static PID yawPID = new PID(1.5, 1, 0.3, max_yaw_speed);
+        static PID yawPID = new PID(0.05, 1, 0.3, max_yaw_speed);
 
         public static double toRadian(double angle)
         {
@@ -905,7 +905,7 @@ namespace WSDKTest
 
                             System.Diagnostics.Debug.WriteLine("Rotating...");
                             hold_rotation = myWP[2].rotation;
-                            mission_state++;                            
+                            mission_state = 6;                            
                         }
                         else
                         {
