@@ -18,6 +18,8 @@ using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
+using Windows.Storage;
+using Windows.Storage.Streams;
 
 namespace WSDKTest
 {
@@ -144,6 +146,10 @@ namespace WSDKTest
                         AltitudeBox.Text = "Current Altitude: " + currentAltitude;
                         PositionBox.Text = "Current Position: " + Math.Round(current2Dpostion.x, 5) + " " + Math.Round(current2Dpostion.y, 5);
                         RotationBox.Text = "Current Heading: " + true_north_heading;
+                        if (current2Dpostion.x == 0 && current2Dpostion.y == 0)
+                        {
+                            Message.Text = "Initialization Failed. Restart the App after connected to drone.";
+                        }
                     });
 
                     //run at max 5Hz
@@ -196,11 +202,32 @@ namespace WSDKTest
                 }
                 //Invalidate cache and trigger redraw
                 VideoSource.Invalidate();
+                SaveImage(VideoSource);
             });
         }
 
-        private void Stop_Button_Click(object sender, RoutedEventArgs e)
+        private async void Stop_Button_Click(object sender, RoutedEventArgs e)
         {
+            string command = @"C:\Users\USER\AppData\Local\Packages\Sample_82w491b8nw3hm\LocalState\testpy.py";
+
+            var options = new Windows.System.LauncherOptions();
+            options.TreatAsUntrusted = true;
+            bool success = await Windows.System.Launcher.LaunchUriAsync(new System.Uri(command), options);
+            
+                if (success)
+                {
+                    Message.Text = "success";
+                }
+                else
+                {
+                Message.Text = "not success";
+            }
+            
+
+            //Process process = new Process();
+            //process.StartInfo.FileName = command;
+            //process.Start();
+
             throttle = 0;
             roll = 0;
             pitch = 0;
@@ -265,6 +292,7 @@ namespace WSDKTest
         static float max_speed = 0.5f;
         static double angle_remain;
         static double hold_rotation = 0;
+        static int image_count = 1;
 
         struct position
         {
@@ -411,6 +439,40 @@ namespace WSDKTest
                 System.Diagnostics.Debug.WriteLine("WP[{0}] {1} {2} {3}", i, myWP[i].x, myWP[i].y, myWP[i].rotation);
         }
 
+        private async void SaveImage(WriteableBitmap bmp)
+        {
+            //Create folder
+            StorageFolder myfolder = await Windows.Storage.ApplicationData.Current.LocalFolder.CreateFolderAsync("Images", CreationCollisionOption.OpenIfExists);
+            string filename_img = "img" + image_count + ".jpeg";
+            image_count++;
+            StorageFile sampleFile = await myfolder.CreateFileAsync(filename_img, CreationCollisionOption.ReplaceExisting);
+            byte[] dummy = await EncodeJpeg(bmp);
+            await FileIO.WriteBytesAsync(sampleFile, dummy);
+        }
+
+        private async Task<byte[]> EncodeJpeg(WriteableBitmap bmp)
+        {
+            SoftwareBitmap soft = SoftwareBitmap.CreateCopyFromBuffer(bmp.PixelBuffer, BitmapPixelFormat.Bgra8, bmp.PixelWidth, bmp.PixelHeight);
+            byte[] array = null;
+
+            using (var ms = new InMemoryRandomAccessStream())
+            {
+                BitmapEncoder encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.JpegEncoderId, ms);
+                encoder.SetSoftwareBitmap(soft);
+
+                try
+                {
+                    await encoder.FlushAsync();
+                }
+                catch { }
+
+                array = new byte[ms.Size];
+                await ms.ReadAsync(array.AsBuffer(), (uint)ms.Size, InputStreamOptions.None);
+            }
+
+            return array;
+        }
+
         private async void Grid_KeyUp(object sender, KeyRoutedEventArgs e)
         {
             switch (e.Key)
@@ -470,11 +532,7 @@ namespace WSDKTest
                         }
                         */
 
-                        if (current2Dpostion.x == 0 && current2Dpostion.y == 0)
-                        {
-                            Message.Text = "Initialization Failed. Restart the App after connected to drone.";
-                        }
-                        else if (script_started == false)
+                        if (script_started == false)
                         {
                             Message.Text = "Auto-Mission Starting";
                             script_started = true;
