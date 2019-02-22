@@ -5,6 +5,7 @@
     xmlns:local="using:WSDKTest"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     KeyUp="Grid_KeyUp" KeyDown="Grid_KeyDown">
@@ -107,12 +108,12 @@
                         <KeyboardAccelerator Key="x" Modifiers="Control" />
                     </Button.KeyboardAccelerators>
                 </Button>
-                <Button Content="StartRecording" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="StartRecording">
+                <Button Content="StartRecording" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="StartRecording_Button_Click">
                     <Button.KeyboardAccelerators>
                         <KeyboardAccelerator Key="x" Modifiers="Control" />
                     </Button.KeyboardAccelerators>
                 </Button>
-                <Button Content="StopRecording" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="StopRecording">
+                <Button Content="StopRecording" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="StopRecording_Button_Click">
                     <Button.KeyboardAccelerators>
                         <KeyboardAccelerator Key="x" Modifiers="Control" />
                     </Button.KeyboardAccelerators>

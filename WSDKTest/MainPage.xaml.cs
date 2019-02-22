@@ -20,6 +20,12 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.Storage;
 using Windows.Storage.Streams;
+using Windows.Media.Editing;
+using Microsoft.Graphics.Canvas.UI.Xaml;
+using Microsoft.Graphics.Canvas;
+using Windows.Media.Transcoding;
+using Windows.UI.Core;
+using Windows.Foundation;
 
 namespace WSDKTest
 {
@@ -202,7 +208,9 @@ namespace WSDKTest
                 }
                 //Invalidate cache and trigger redraw
                 VideoSource.Invalidate();
-                //SaveImage(VideoSource);
+                SaveImage(VideoSource);
+                /*if(video_enabled)
+                    PrepareVideo(VideoSource, video_enabled);*/
             });
         }
 
@@ -263,6 +271,39 @@ namespace WSDKTest
             Message.Text = "Waypoints updated";
         }
 
+        private void StartRecording_Button_Click(object sender, RoutedEventArgs e)
+        {
+            composition = new MediaComposition();
+            lastframe = DateTime.Now;
+            thisframe = DateTime.Now;
+            video_enabled = true;
+            video_saved = false;
+            if (VideoProtectionTimerAsync != null)
+            {
+                VideoProtectionTimerAsync.Stop();
+                VideoProtectionTimerAsync.Dispose();
+            }
+            SetVideoProtectionTimer();
+            System.Diagnostics.Debug.WriteLine("Video Recording Started");
+        }
+
+        private void StopRecording_Button_Click(object sender, RoutedEventArgs e)
+        {
+            if (video_enabled == true)
+            {
+                System.Diagnostics.Debug.WriteLine("Video Recording Ended");
+                video_enabled = false;
+                SaveVideo(composition);
+                lastframe = DateTime.Now;
+                thisframe = DateTime.Now;
+                if (VideoProtectionTimerAsync != null)
+                {
+                    VideoProtectionTimerAsync.Stop();
+                    VideoProtectionTimerAsync.Dispose();
+                }
+            }
+        }
+
         private static float throttle = 0;
         private static float roll = 0;
         private static float pitch = 0;
@@ -270,8 +311,11 @@ namespace WSDKTest
 
         //custom var
         private static System.Timers.Timer TimerAsync;
+        private static System.Timers.Timer VideoProtectionTimerAsync;
         bool script_started = false;
         static int mission_state = 0;
+        static DateTime lastframe = DateTime.Now;
+        static DateTime thisframe;
         static DateTime startTime;
         static DateTime endTime;
         static DateTime takeoffstarttime;
@@ -293,6 +337,11 @@ namespace WSDKTest
         static double angle_remain;
         static double hold_rotation = 0;
         static int image_count = 1;
+        static int video_count = 1;
+        const int frame_rate = 30;
+        bool video_enabled = false;
+        bool video_saved = false;
+        MediaComposition composition = new MediaComposition();
 
         struct position
         {
@@ -446,8 +495,8 @@ namespace WSDKTest
             string filename_img = "img" + image_count + ".jpeg";
             image_count++;
             StorageFile sampleFile = await myfolder.CreateFileAsync(filename_img, CreationCollisionOption.ReplaceExisting);
-            byte[] dummy = await EncodeJpeg(bmp);
-            await FileIO.WriteBytesAsync(sampleFile, dummy);
+            byte[] jpg_buffer = await EncodeJpeg(bmp);
+            await FileIO.WriteBytesAsync(sampleFile, jpg_buffer);
         }
 
         private async Task<byte[]> EncodeJpeg(WriteableBitmap bmp)
@@ -471,6 +520,69 @@ namespace WSDKTest
             }
 
             return array;
+        }
+
+        private void PrepareVideo(WriteableBitmap bmp, bool EN)
+        {
+            if (EN)
+            {
+                SoftwareBitmap frame = SoftwareBitmap.CreateCopyFromBuffer(bmp.PixelBuffer, BitmapPixelFormat.Bgra8, bmp.PixelWidth, bmp.PixelHeight, BitmapAlphaMode.Premultiplied);
+                CanvasRenderTarget rendertarget = null;
+                using (CanvasBitmap canvas = CanvasBitmap.CreateFromSoftwareBitmap(CanvasDevice.GetSharedDevice(), frame))
+                {
+                    rendertarget = new CanvasRenderTarget(CanvasDevice.GetSharedDevice(), canvas.SizeInPixels.Width, canvas.SizeInPixels.Height, 96);
+                    using (CanvasDrawingSession ds = rendertarget.CreateDrawingSession())
+                    {
+                        ds.Clear(Windows.UI.Colors.Black);
+                        ds.DrawImage(canvas);
+                    }
+                }
+                thisframe = DateTime.Now;
+                MediaClip m = MediaClip.CreateFromSurface(rendertarget, thisframe - lastframe);
+                lastframe = thisframe;
+                composition.Clips.Add(m);
+            }
+        }
+        
+        private async Task SaveVideo(MediaComposition video_com)
+        {
+            StorageFolder myfolder = await Windows.Storage.ApplicationData.Current.LocalFolder.CreateFolderAsync("Videos", CreationCollisionOption.OpenIfExists);
+            string filename_vid = "video" + video_count + ".mp4";
+            video_count++;
+            StorageFile videoFile = await myfolder.CreateFileAsync(filename_vid, CreationCollisionOption.ReplaceExisting);
+            var saveOperation = video_com.RenderToFileAsync(videoFile, MediaTrimmingPreference.Precise);
+            System.Diagnostics.Debug.WriteLine("Now saving: {0}", filename_vid);
+            saveOperation.Progress = new AsyncOperationProgressHandler<TranscodeFailureReason, double>(async (info, progress) =>
+            {
+                await this.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, new DispatchedHandler(() =>
+                {
+                    System.Diagnostics.Debug.WriteLine(string.Format("Saving file... Progress: {0:F0}%", progress));
+                }));
+            });
+            saveOperation.Completed = new AsyncOperationWithProgressCompletedHandler<TranscodeFailureReason, double>(async (info, status) =>
+            {
+                await this.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, new DispatchedHandler(() =>
+                {
+                    try
+                    {
+                        var results = info.GetResults();
+                        if (results != TranscodeFailureReason.None || status != AsyncStatus.Completed)
+                        {
+                            video_saved = true;
+                            System.Diagnostics.Debug.WriteLine("Saving was unsuccessful");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("Trimmed clip saved to file");
+                        }
+                    }
+                    finally
+                    {
+                        // Update UI whether the operation succeeded or not
+                    }
+
+                }));
+            });
         }
 
         private async void Grid_KeyUp(object sender, KeyRoutedEventArgs e)
@@ -752,39 +864,6 @@ namespace WSDKTest
             }
         }
 
-        private async void StartRecording(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var error = await DJISDKManager.Instance.ComponentManager.GetCameraHandler(0, 0).StartRecordAsync();
-
-                if (error != SDKError.NO_ERROR)
-                {
-                    System.Diagnostics.Debug.WriteLine(error); ;
-                }
-            }
-            catch (Exception err)
-            {
-                System.Diagnostics.Debug.WriteLine(err);
-            }
-        }
-
-        private async void StopRecording(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var error = await DJISDKManager.Instance.ComponentManager.GetCameraHandler(0, 0).StopRecordAsync();
-                if (error != SDKError.NO_ERROR)
-                {
-                    System.Diagnostics.Debug.WriteLine(error);
-                }
-            }
-            catch (Exception err)
-            {
-                System.Diagnostics.Debug.WriteLine(err);
-            }
-        }
-
         private static void SetTimer()
         {
             // Create a timer with a two second interval.
@@ -793,6 +872,29 @@ namespace WSDKTest
             TimerAsync.Elapsed += state_change;
             TimerAsync.AutoReset = true;
             TimerAsync.Enabled = true;
+        }
+
+        private void SetVideoProtectionTimer()
+        {
+            VideoProtectionTimerAsync = new System.Timers.Timer(10000);
+            VideoProtectionTimerAsync.Elapsed += VideoProtection;
+            VideoProtectionTimerAsync.AutoReset = false;
+            VideoProtectionTimerAsync.Enabled = true;
+        }
+        
+        private void VideoProtection(Object source, ElapsedEventArgs e)
+        {
+            video_enabled = false;
+            SaveVideo(composition);
+            //composition = new MediaComposition();
+            System.Diagnostics.Debug.WriteLine("Video Recording Ended as 10s pasted");
+            lastframe = DateTime.Now;
+            thisframe = DateTime.Now;
+            if (VideoProtectionTimerAsync != null)
+            {
+                VideoProtectionTimerAsync.Stop();
+                VideoProtectionTimerAsync.Dispose();
+            }
         }
 
         private void getAltitudeChanged(object sender, DoubleMsg? value)
