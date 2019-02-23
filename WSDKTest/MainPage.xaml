@@ -21,7 +21,7 @@
             </Border>
             <StackPanel Grid.Column="1" Padding="5">
                 <TextBlock Text="Scanned QRCode:" TextWrapping="Wrap" HorizontalAlignment="Stretch" Margin="0,0,0,0" VerticalAlignment="Stretch"/>
-                <TextBox  x:Name="Textbox" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True"/>
+                <TextBox  x:Name="Textbox" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" Height="250px"/>
                 <Button Content="STOP" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="Stop_Button_Click">
                     <Button.KeyboardAccelerators>
                         <KeyboardAccelerator Key="x" Modifiers="Control" />
@@ -69,45 +69,6 @@
 
 
                 <TextBlock TextWrapping="Wrap" Text="" Height="50px"/>
-                <TextBlock TextWrapping="Wrap" Text="Waypoints Tuning"/>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Row="0" Grid.Column="1" Text="x" TextAlignment="Center"/>
-                    <TextBlock Grid.Row="0" Grid.Column="2" Text="y" TextAlignment="Center"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="WP1" />
-                    <TextBox x:Name="WP1x" Grid.Row="1" Grid.Column="1" AcceptsReturn="True"/>
-                    <TextBox x:Name="WP1y" Grid.Row="1" Grid.Column="2" AcceptsReturn="True"/>
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="WP2" />
-                    <TextBox x:Name="WP2x" Grid.Row="2" Grid.Column="1" AcceptsReturn="True"/>
-                    <TextBox x:Name="WP2y" Grid.Row="2" Grid.Column="2" AcceptsReturn="True"/>
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="WP3" />
-                    <TextBox x:Name="WP3x" Grid.Row="3" Grid.Column="1" AcceptsReturn="True"/>
-                    <TextBox x:Name="WP3y" Grid.Row="3" Grid.Column="2" AcceptsReturn="True"/>
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="WP4" />
-                    <TextBox x:Name="WP4x" Grid.Row="4" Grid.Column="1" AcceptsReturn="True"/>
-                    <TextBox x:Name="WP4y" Grid.Row="4" Grid.Column="2" AcceptsReturn="True"/>
-                    <TextBlock Grid.Row="5" Grid.Column="0" Text="WP5" />
-                    <TextBox x:Name="WP5x" Grid.Row="5" Grid.Column="1" AcceptsReturn="True"/>
-                    <TextBox x:Name="WP5y" Grid.Row="5" Grid.Column="2" AcceptsReturn="True"/>
-                </Grid>
-                <Button Content="SET" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="Set_Button_Click">
-                    <Button.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="x" Modifiers="Control" />
-                    </Button.KeyboardAccelerators>
-                </Button>
                 <Button Content="StartRecording" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="StartRecording_Button_Click">
                     <Button.KeyboardAccelerators>
                         <KeyboardAccelerator Key="x" Modifiers="Control" />

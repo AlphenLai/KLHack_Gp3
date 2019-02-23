@@ -26,6 +26,7 @@ using Microsoft.Graphics.Canvas;
 using Windows.Media.Transcoding;
 using Windows.UI.Core;
 using Windows.Foundation;
+using System.IO;
 
 namespace WSDKTest
 {
@@ -67,22 +68,21 @@ namespace WSDKTest
 
                 await DJISDKManager.Instance.ComponentManager.GetFlightAssistantHandler(0, 0).SetObstacleAvoidanceEnabledAsync(new BoolMsg() { value = false });
                 await DJISDKManager.Instance.ComponentManager.GetFlightAssistantHandler(0, 0).SetVisionAssistedPositioningEnabledAsync(new BoolMsg() { value = true });
+                await DJISDKManager.Instance.ComponentManager.GetFlightAssistantHandler(0, 0).SetLandingProtectionEnabledAsync(new BoolMsg() { value = false });
                 await DJISDKManager.Instance.ComponentManager.GetFlightAssistantHandler(0, 0).StartAlignedPushDataAsync();
-
+                
                 await Task.Delay(5000);
-                GimbalResetCommandMsg resetMsg = new GimbalResetCommandMsg() { value = GimbalResetCommand.UNKNOWN };
-
-                await DJISDKManager.Instance.ComponentManager.GetGimbalHandler(0, 0).ResetGimbalAsync(resetMsg);
+                
             };
             DJISDKManager.Instance.RegisterApp("3ad4ddfffc9f656725e12c34");
 
             //subscribing event handlers
             //DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).TakeoffLocationAltitudeChanged += getTakeoffLocationAltitudeChanged;
-            DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).AttitudeChanged += getAttitudeChanged;
-            DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).AltitudeChanged += getAltitudeChanged;
-            DJISDKManager.Instance.ComponentManager.GetFlightAssistantHandler(0, 0).AlignedAircraftLocationChanged += getAlignedAircraftLocationChanged;
+            DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).AttitudeChanged += GetAttitudeChanged;
+            DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).AltitudeChanged += GetAltitudeChanged;
+            DJISDKManager.Instance.ComponentManager.GetFlightAssistantHandler(0, 0).AlignedAircraftLocationChanged += GetAlignedAircraftLocationChanged;
             //DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).AircraftLocationChanged += getAircraftLocationChanged;
-            
+
         }
 
         void OnVideoPush(VideoFeed sender, [ReadOnlyArray] ref byte[] bytes)
@@ -139,7 +139,7 @@ namespace WSDKTest
                     int elapsed = (int)watch.ElapsedMilliseconds;
 
                     //broadcasting messages here
-                    //System.Diagnostics.Debug.WriteLine("currentAltitude:{0}", currentAltitude);
+                    System.Diagnostics.Debug.WriteLine("currentAltitude:{0}", currentAltitude);
                     //System.Diagnostics.Debug.WriteLine("latitude:{0}\tlongitude:{1}", latitude, longitude);
                     System.Diagnostics.Debug.WriteLine("Aircraft heading direction:{0}", true_north_heading);
                     //System.Diagnostics.Debug.WriteLine("3D-plane coordinate: x={0}\ty={1}\tz={2}", N_position, E_position, D_position);
@@ -160,6 +160,8 @@ namespace WSDKTest
 
                     //run at max 5Hz
                     await Task.Delay(Math.Max(0, 200 - elapsed));
+                    await DJISDKManager.Instance.ComponentManager.GetCameraHandler(0, 0).SetCameraColorAsync(new CameraColorMsg() { value = CameraColor.BLACK_WHITE });
+
                 }
             });
         }
@@ -208,14 +210,16 @@ namespace WSDKTest
                 }
                 //Invalidate cache and trigger redraw
                 VideoSource.Invalidate();
-                SaveImage(VideoSource);
-                /*if(video_enabled)
-                    PrepareVideo(VideoSource, video_enabled);*/
+                if(shooting_enabled)
+                    SaveImage(VideoSource);
+                if(video_enabled)
+                    PrepareVideo(VideoSource, video_enabled);
             });
         }
 
         private async void Stop_Button_Click(object sender, RoutedEventArgs e)
         {
+            SaveResult(Textbox.Text.ToString());
             string command = @"C:\Users\USER\AppData\Local\Packages\Sample_82w491b8nw3hm\LocalState\testpy.py";
 
             var options = new Windows.System.LauncherOptions();
@@ -231,11 +235,6 @@ namespace WSDKTest
                 Message.Text = "not success";
             }
             
-
-            //Process process = new Process();
-            //process.StartInfo.FileName = command;
-            //process.Start();
-
             throttle = 0;
             roll = 0;
             pitch = 0;
@@ -261,47 +260,16 @@ namespace WSDKTest
             yawPID.tune(Convert.ToDouble(yawP.Text), Convert.ToDouble(yawI.Text), Convert.ToDouble(yawD.Text));
             Message.Text = "PID updated";
         }
-
-        private void Set_Button_Click(object sender, RoutedEventArgs e)
+        private async void StartRecording_Button_Click(object sender, RoutedEventArgs e)
         {
-            myWP[1] = rotationMatrix(new position(Convert.ToDouble(WP1x.Text), Convert.ToDouble(WP1y.Text)), local_heading);
-            myWP[2] = rotationMatrix(new position(Convert.ToDouble(WP2x.Text), Convert.ToDouble(WP2y.Text)), local_heading);
-            myWP[3] = rotationMatrix(new position(Convert.ToDouble(WP3x.Text), Convert.ToDouble(WP3y.Text)), local_heading);
-            myWP[4] = rotationMatrix(new position(Convert.ToDouble(WP4x.Text), Convert.ToDouble(WP4y.Text)), local_heading);
-            Message.Text = "Waypoints updated";
+            //await DJISDKManager.Instance.ComponentManager.GetCameraHandler(0, 0).StartRecordAsync();
+            StartRecording();
         }
 
-        private void StartRecording_Button_Click(object sender, RoutedEventArgs e)
+        private async void StopRecording_Button_Click(object sender, RoutedEventArgs e)
         {
-            composition = new MediaComposition();
-            lastframe = DateTime.Now;
-            thisframe = DateTime.Now;
-            video_enabled = true;
-            video_saved = false;
-            if (VideoProtectionTimerAsync != null)
-            {
-                VideoProtectionTimerAsync.Stop();
-                VideoProtectionTimerAsync.Dispose();
-            }
-            SetVideoProtectionTimer();
-            System.Diagnostics.Debug.WriteLine("Video Recording Started");
-        }
-
-        private void StopRecording_Button_Click(object sender, RoutedEventArgs e)
-        {
-            if (video_enabled == true)
-            {
-                System.Diagnostics.Debug.WriteLine("Video Recording Ended");
-                video_enabled = false;
-                SaveVideo(composition);
-                lastframe = DateTime.Now;
-                thisframe = DateTime.Now;
-                if (VideoProtectionTimerAsync != null)
-                {
-                    VideoProtectionTimerAsync.Stop();
-                    VideoProtectionTimerAsync.Dispose();
-                }
-            }
+            //await DJISDKManager.Instance.ComponentManager.GetCameraHandler(0, 0).StopRecordAsync();
+            StartRecording();
         }
 
         private static float throttle = 0;
@@ -316,9 +284,6 @@ namespace WSDKTest
         static int mission_state = 0;
         static DateTime lastframe = DateTime.Now;
         static DateTime thisframe;
-        static DateTime startTime;
-        static DateTime endTime;
-        static DateTime takeoffstarttime;
         static double currentAltitude;
         static double currentAltitudeNotBaro;
         static double latitude;
@@ -330,10 +295,11 @@ namespace WSDKTest
         static double D_position;
         static double Y_offset = 0;
         static double X_offset = 0;
-        static double WP_tolarence = 0.15f;
+        static double WP_tolarence = 0.07f;
         static double angle_tolarence = 0.2f;
-        static float max_yaw_speed = 1.0f;
-        static float max_speed = 0.5f;
+        static float max_yaw_speed = 0.3f;
+        static float max_speed = 0.2f;
+        static float max_vert_speed = 0.5f;
         static double angle_remain;
         static double hold_rotation = 0;
         static int image_count = 1;
@@ -341,16 +307,19 @@ namespace WSDKTest
         const int frame_rate = 30;
         bool video_enabled = false;
         bool video_saved = false;
+        bool shooting_enabled = false;
+        bool first_time = true;
+        bool fast_yaw = false;
         MediaComposition composition = new MediaComposition();
 
-        struct position
+        struct Position
         {
             public double x;
             public double y;
             public double rotation;
             public double tolarence;
 
-            public position(double x0, double y0, double rotation0 = 0, double tolarence0 = 1) : this()
+            public Position(double x0, double y0, double rotation0 = 0, double tolarence0 = 1) : this()
             {
                 x = x0;
                 y = y0;
@@ -358,12 +327,12 @@ namespace WSDKTest
                 tolarence = tolarence0;
             }
 
-            public double compare(position target)
+            public double compare(Position target)
             {
                 return Math.Sqrt((x - target.x) * (x - target.x) + (y - target.y) * (y - target.y));
             }
 
-            public void updateYaw(position currentPos)
+            public void updateYaw(Position currentPos)
             {
                 int sign = 1;
                 if (x - currentPos.x >= 0)          //to rightward
@@ -372,23 +341,23 @@ namespace WSDKTest
                     sign = -1;
                 if (y - currentPos.y < 0)           //to backward
                 {
-                    rotation = 90.0 + sign * compassBoundary(Math.Round(toDegree(Math.Atan((x - currentPos.x) / (y - currentPos.y))), 1));
+                    rotation = 90.0 + sign * CompassBoundary(Math.Round(ToDegree(Math.Atan((x - currentPos.x) / (y - currentPos.y))), 1));
                 }
                 else                            //to forward
                 {
-                    rotation = sign * compassBoundary(Math.Round(toDegree(Math.Atan((x - currentPos.x) / (y - currentPos.y))), 1));
+                    rotation = sign * CompassBoundary(Math.Round(ToDegree(Math.Atan((x - currentPos.x) / (y - currentPos.y))), 1));
                 }
             }
 
-            public double offsetFromPath(position lastWP, position currentPos)
+            public double offsetFromPath(Position lastWP, Position currentPos)
             {
                 //return the distance between current position and the line alone last and next waypoint
                 //-ve = LHS, +ve = RHS
                 return ((y - lastWP.y) * currentPos.x - (x - lastWP.x) * currentPos.y + x * lastWP.y - y * lastWP.x) / Math.Sqrt((y - lastWP.y) * (y - lastWP.y) + (x - lastWP.x) * (x - lastWP.x));
             }
         }
-        static position current2Dpostion;
-        static position[] myWP = new position[10];
+        static Position current2Dpostion;
+        static Position[] myWP = new Position[10];
 
         struct PID
         {
@@ -423,8 +392,12 @@ namespace WSDKTest
                     integral = -max_in;
                 derivative = error - last_error;
                 last_error = error;
-
-                float output = Convert.ToSingle(Kp * error + (1 / Ki) * integral + Kd * derivative);
+                
+                float output;
+                if(Ki == 0)
+                    output = Convert.ToSingle(Kp * error + Kd * derivative);
+                else
+                    output = Convert.ToSingle(Kp * error + (1.0 / Ki) * integral + Kd * derivative);
                 if (output >= max_output)
                     return max_output;
                 else if (output <= -max_output)
@@ -440,49 +413,89 @@ namespace WSDKTest
             }
         }
 
-        static PID rollPID = new PID(1.5, 1, 1, max_speed);
-        static PID pitchPID = new PID(1.5, 1, 1, max_speed);
-        static PID yawPID = new PID(0.05, 1, 0.3, max_yaw_speed);
+        static PID rollPID = new PID(1, 0, 0.1, max_speed);
+        static PID pitchPID = new PID(1.01, 0.1, 0.11, max_speed);
+        static PID yawPID = new PID(0.00104, 0.001, 0.0045, max_yaw_speed);
+        static PID throttlePID = new PID(1.5, 0, 0.1, max_vert_speed);
+        static PID fastyawPID = new PID(2, 0, 0.1, 0.5f);
 
-        public static double toRadian(double angle)
+        public static double CompassBoundary(double compassValue)
+        {
+            compassValue %= 360.0f;
+            if (compassValue > 180)
+            {
+                return -(360.0f - compassValue);
+            }
+            else if (compassValue < -180)
+            {
+                return 360.0f + compassValue;
+            }
+            else
+            {
+                return compassValue;
+            }
+        }
+        public static double ToRadian(double angle)
         {
             return (Math.PI / 180) * angle;
         }
 
-        public static double toDegree(double rad)
+        public static double ToDegree(double rad)
         {
             return rad * (180.0 / Math.PI);
         }
 
-        static position rotationMatrix(position originPlane, double degree)
+        static Position RotationMatrix(Position originPlane, double degree)
         {
-            double x0 = Math.Cos(toRadian(degree)) * originPlane.x + -Math.Sin(toRadian(degree)) * originPlane.y;
-            double y0 = Math.Sin(toRadian(degree)) * originPlane.x + Math.Cos(toRadian(degree)) * originPlane.y;
-            position newPlane = new position(x0, y0);
+            double x0 = Math.Cos(ToRadian(degree)) * originPlane.x + -Math.Sin(ToRadian(degree)) * originPlane.y;
+            double y0 = Math.Sin(ToRadian(degree)) * originPlane.x + Math.Cos(ToRadian(degree)) * originPlane.y;
+            Position newPlane = new Position(x0, y0);
             return newPlane;
         }
 
-        private void setWP()
+        private void SetWP()
         {
+            Position temp_wp;
             myWP[0].x = 0.0f;
             myWP[0].y = 0.0f;
-            myWP[0].rotation = compassBoundary(0.0f + local_heading);
+            myWP[0].rotation = CompassBoundary(0.0f + local_heading);
             myWP[0].tolarence = WP_tolarence;
 
-            myWP[1].x = myWP[0].x - 1.0f * Math.Cos(toRadian(180.0f +local_heading));
-            myWP[1].y = myWP[0].y + 1.0f * Math.Sin(toRadian(180.0f +local_heading));
-            myWP[1].rotation = compassBoundary(0.0f + local_heading);
+            temp_wp = RotationMatrix(new Position(2.0, 0), CompassBoundary(-local_heading));
+            myWP[1].x = temp_wp.x;
+            myWP[1].y = temp_wp.y;
+            myWP[1].rotation = CompassBoundary(0.0f + local_heading);
             myWP[1].tolarence = WP_tolarence;
 
-            myWP[2].x = myWP[1].x + 1.0f * Math.Sin(toRadian(180 + local_heading));
-            myWP[2].y = myWP[1].y + 1.0f * Math.Cos(toRadian(180 + local_heading));
-            myWP[2].rotation = compassBoundary(180.0f + local_heading);
+            temp_wp = RotationMatrix(new Position(0, 0), CompassBoundary(-local_heading));
+            myWP[2].x = temp_wp.x;
+            myWP[2].y = temp_wp.y;
+            myWP[2].rotation = CompassBoundary(0.0f + local_heading);
             myWP[2].tolarence = WP_tolarence;
 
-            myWP[3].x = myWP[2].x + 1.0f * Math.Cos(toRadian(180 + local_heading));
-            myWP[3].y = myWP[2].y - 1.0f * Math.Sin(toRadian(180 + local_heading));
-            myWP[3].rotation = compassBoundary(180.0f + local_heading);
+            temp_wp = RotationMatrix(new Position(2.0, 0), CompassBoundary(-local_heading));
+            myWP[3].x = temp_wp.x;
+            myWP[3].y = temp_wp.y;
+            myWP[3].rotation = CompassBoundary(180.0f + local_heading);
             myWP[3].tolarence = WP_tolarence;
+
+            temp_wp = RotationMatrix(new Position(0, 0), CompassBoundary(-local_heading));
+            myWP[4].x = temp_wp.x;
+            myWP[4].y = temp_wp.y;
+            myWP[4].rotation = CompassBoundary(180.0f + local_heading);
+            myWP[4].tolarence = WP_tolarence;
+
+            temp_wp = RotationMatrix(new Position(2.0, 0), CompassBoundary(-local_heading));
+            myWP[5].x = temp_wp.x;
+            myWP[5].y = temp_wp.y;
+            myWP[5].rotation = CompassBoundary(180.0f + local_heading);
+            myWP[5].tolarence = WP_tolarence;
+
+            temp_wp = RotationMatrix(new Position(0, 0), CompassBoundary(-local_heading));
+            myWP[6].x = temp_wp.x;
+            myWP[6].y = temp_wp.y;
+            myWP[6].rotation = CompassBoundary(180.0f + local_heading);
+            myWP[6].tolarence = WP_tolarence;
 
             for (int i = 0; i < myWP.Length; i++)
                 System.Diagnostics.Debug.WriteLine("WP[{0}] {1} {2} {3}", i, myWP[i].x, myWP[i].y, myWP[i].rotation);
@@ -498,7 +511,13 @@ namespace WSDKTest
             byte[] jpg_buffer = await EncodeJpeg(bmp);
             await FileIO.WriteBytesAsync(sampleFile, jpg_buffer);
         }
-
+        private async void SaveResult(string result)
+        {
+            string filename_csv = "result.csv";
+            StorageFolder myfolder2 = await Windows.Storage.ApplicationData.Current.LocalFolder.CreateFolderAsync("Doc", CreationCollisionOption.OpenIfExists);
+            StorageFile sampleFile2 = await myfolder2.CreateFileAsync(filename_csv, CreationCollisionOption.ReplaceExisting);
+            File.WriteAllText(filename_csv, result);
+        }
         private async Task<byte[]> EncodeJpeg(WriteableBitmap bmp)
         {
             SoftwareBitmap soft = SoftwareBitmap.CreateCopyFromBuffer(bmp.PixelBuffer, BitmapPixelFormat.Bgra8, bmp.PixelWidth, bmp.PixelHeight);
@@ -568,11 +587,11 @@ namespace WSDKTest
                         var results = info.GetResults();
                         if (results != TranscodeFailureReason.None || status != AsyncStatus.Completed)
                         {
-                            video_saved = true;
                             System.Diagnostics.Debug.WriteLine("Saving was unsuccessful");
                         }
                         else
                         {
+                            video_saved = true;
                             System.Diagnostics.Debug.WriteLine("Trimmed clip saved to file");
                         }
                     }
@@ -585,6 +604,45 @@ namespace WSDKTest
             });
         }
 
+        private void StartRecording()
+        {
+            composition = new MediaComposition();
+            lastframe = DateTime.Now;
+            thisframe = DateTime.Now;
+            video_enabled = true;
+            video_saved = false;
+            if (VideoProtectionTimerAsync != null)
+            {
+                VideoProtectionTimerAsync.Stop();
+                VideoProtectionTimerAsync.Dispose();
+            }
+            SetVideoProtectionTimer();
+            System.Diagnostics.Debug.WriteLine("Video Recording Started");
+        }
+
+        private void StopRecording()
+        {
+            if (video_enabled == true)
+            {
+                System.Diagnostics.Debug.WriteLine("Video Recording Ended");
+                video_enabled = false;
+                SaveVideo(composition);
+                lastframe = DateTime.Now;
+                thisframe = DateTime.Now;
+                if (VideoProtectionTimerAsync != null)
+                {
+                    VideoProtectionTimerAsync.Stop();
+                    VideoProtectionTimerAsync.Dispose();
+                }
+            }
+        }
+
+        private async void SetCamera()
+        {
+            //await DJISDKManager.Instance.ComponentManager.GetCameraHandler(0, 0).SetShutterSpeedAsync(new CameraShutterSpeedMsg() { value =  CameraShutterSpeed.SHUTTER_SPEED1_15});
+            //await DJISDKManager.Instance.ComponentManager.GetCameraHandler(0, 0).SetCameraColorAsync(new CameraColorMsg() { value = CameraColor.BLACK_WHITE });
+            //await DJISDKManager.Instance.ComponentManager.GetCameraHandler(0, 0).SetVideoResolutionAndFrameRateAsync(new VideoResolutionAndFrameRate() { resolution = VideoResolution.RESOLUTION_1280x720, frameRate = VideoFrameRate.RATE_120FPS });
+        }
         private async void Grid_KeyUp(object sender, KeyRoutedEventArgs e)
         {
             switch (e.Key)
@@ -619,7 +677,6 @@ namespace WSDKTest
                         Y_offset = current2Dpostion.y;
                         X_offset = current2Dpostion.x;
 
-                        setWP();
                         var res = await DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).StartTakeoffAsync();
                         System.Diagnostics.Debug.Write("takeoff\n");
                         break;
@@ -634,28 +691,39 @@ namespace WSDKTest
                         var res = await DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).StopAutoLandingAsync();
                         break;
                     }
+                case Windows.System.VirtualKey.X:
+                    {
+                        throttle = 0;
+                        roll = 0;
+                        pitch = 0;
+                        yaw = 0;
+                        mission_state = -1;
+                        script_started = false;
+
+                        try
+                        {
+                            if (DJISDKManager.Instance != null)
+                                DJISDKManager.Instance.VirtualRemoteController.UpdateJoystickValue(throttle, yaw, pitch, roll);
+                        }
+                        catch (Exception err)
+                        {
+                            System.Diagnostics.Debug.WriteLine(err);
+                        }
+                        break;
+                    }
                 case Windows.System.VirtualKey.Z:
                     {
-                        /*
-                        if (TimerAsync != null)
-                        {N_offset
-                            TimerAsync.Stop();
-                            TimerAsync.Dispose();
-                        }
-                        */
-
                         if (script_started == false)
                         {
                             Message.Text = "Auto-Mission Starting";
                             script_started = true;
                             mission_state = 0;
-                            //startTime = DateTime.Now;
                             SetTimer();
                             local_heading = true_north_heading;
                             hold_rotation = local_heading;
                             Y_offset = current2Dpostion.y;
                             X_offset = current2Dpostion.x;
-                            setWP();
+                            SetWP();
                         }
                         break;
                     }
@@ -864,19 +932,19 @@ namespace WSDKTest
             }
         }
 
-        private static void SetTimer()
+        private void SetTimer()
         {
             // Create a timer with a two second interval.
             TimerAsync = new System.Timers.Timer(100);        //in ms
             // Hook up the Elapsed event for the timer. 
-            TimerAsync.Elapsed += state_change;
+            TimerAsync.Elapsed += State_change;
             TimerAsync.AutoReset = true;
             TimerAsync.Enabled = true;
         }
 
         private void SetVideoProtectionTimer()
         {
-            VideoProtectionTimerAsync = new System.Timers.Timer(10000);
+            VideoProtectionTimerAsync = new System.Timers.Timer(15000);
             VideoProtectionTimerAsync.Elapsed += VideoProtection;
             VideoProtectionTimerAsync.AutoReset = false;
             VideoProtectionTimerAsync.Enabled = true;
@@ -887,7 +955,7 @@ namespace WSDKTest
             video_enabled = false;
             SaveVideo(composition);
             //composition = new MediaComposition();
-            System.Diagnostics.Debug.WriteLine("Video Recording Ended as 10s pasted");
+            System.Diagnostics.Debug.WriteLine("Video Recording Ended as 15s pasted");
             lastframe = DateTime.Now;
             thisframe = DateTime.Now;
             if (VideoProtectionTimerAsync != null)
@@ -897,21 +965,21 @@ namespace WSDKTest
             }
         }
 
-        private void getAltitudeChanged(object sender, DoubleMsg? value)
+        private void GetAltitudeChanged(object sender, DoubleMsg? value)
         {
             if (value.HasValue)
             {
                 currentAltitude = value.Value.value;
             }
         }
-        private void getTakeoffLocationAltitudeChanged(object sender, DoubleMsg? value)
+        private void GetTakeoffLocationAltitudeChanged(object sender, DoubleMsg? value)
         {
             if (value.HasValue)
             {
                 currentAltitudeNotBaro = value.Value.value;
             }
         }
-        private void getAircraftLocationChanged(object sender, LocationCoordinate2D? value)
+        private void GetAircraftLocationChanged(object sender, LocationCoordinate2D? value)
         {
             if (value.HasValue)
             {
@@ -919,14 +987,14 @@ namespace WSDKTest
                 longitude = value.Value.longitude;
             }
         }
-        private void getAttitudeChanged(object sender, Attitude? value)
+        private void GetAttitudeChanged(object sender, Attitude? value)
         {
             if (value.HasValue)
             {
                 true_north_heading = value.Value.yaw;
             }
         }
-        private void getAlignedAircraftLocationChanged(object sender, DoublePoint3D? value)
+        private void GetAlignedAircraftLocationChanged(object sender, DoublePoint3D? value)
         {
             if (value.HasValue)
             {
@@ -939,30 +1007,19 @@ namespace WSDKTest
             }
         }
 
-        private static void attitude_control(float throttle = 0, float roll = 0, float pitch = 0, float yaw = 0)
+        private static void Attitude_control(float throttle = 0, float roll = 0, float pitch = 0, float yaw = 0)
         {
             if (DJISDKManager.Instance != null)
                 DJISDKManager.Instance.VirtualRemoteController.UpdateJoystickValue(throttle, yaw, pitch, roll);
         }
-
-        private static double compassBoundary(double compassValue)
+        private static void Attitude_control()
         {
-            compassValue %= 360.0f;
-            if (compassValue > 180)
-            {
-                return -(360.0f - compassValue);
-            }
-            else if (compassValue < -180)
-            {
-                return 360.0f + compassValue;
-            }
-            else
-            {
-                return compassValue;
-            }
+            throttle = 0;
+            roll = 0;
+            pitch = 0;
+            yaw = 0;
         }
-
-        private static async void state_change(Object source, ElapsedEventArgs e)
+        private async void State_change(Object source, ElapsedEventArgs e)
         {
             /*
             startTime = DateTime.Now;
@@ -974,22 +1031,23 @@ namespace WSDKTest
             System.Diagnostics.Debug.WriteLine("Current State: {0}", mission_state);
             switch (mission_state)
             {
-                case 0:     //take off
+                case 0:
                     {
                         System.Diagnostics.Debug.WriteLine("Taking off...");
-                        takeoffstarttime = DateTime.Now;
                         var res = await DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).StartTakeoffAsync();
-                        mission_state++;
+                        mission_state=1;
                         break;
                     }
-                case 1:     //roll
+                case 1:     //take off
                     {
                         if (currentAltitude >= 1.1)
                         {
                             System.Diagnostics.Debug.WriteLine("Take off completed");
-                            System.Diagnostics.Debug.WriteLine("Rolling...");
-                            roll = 0.5f;
+                            Attitude_control();
+                            StartRecording();
                             mission_state++;
+                            GimbalResetCommandMsg resetMsg = new GimbalResetCommandMsg() { value = GimbalResetCommand.UNKNOWN };
+                            await DJISDKManager.Instance.ComponentManager.GetGimbalHandler(0, 0).ResetGimbalAsync(resetMsg);
                         }
                         else
                         {
@@ -1002,37 +1060,37 @@ namespace WSDKTest
                         if (myWP[1].compare(current2Dpostion) <= myWP[1].tolarence)
                         {
                             System.Diagnostics.Debug.WriteLine("WP1 arrived");
-                            roll = 0;
+                            Attitude_control();
+                            StopRecording();
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
-
-                            System.Diagnostics.Debug.WriteLine("Rotating...");
-                            hold_rotation = myWP[2].rotation;
-                            mission_state = 6;                            
+                            mission_state++;
                         }
                         else
                         {
+                            roll = max_speed;
                             pitch = pitchPID.get(myWP[1].offsetFromPath(myWP[0], current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
                             System.Diagnostics.Debug.WriteLine("Flying to WP1, distance = {0}", myWP[1].compare(current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[1].offsetFromPath(myWP[0], current2Dpostion));
                         }
                         break;
                     }
-                case 3:     //rotate to new rotation
+                case 3:     //down to 0.7
                     {
-                        
-                        angle_remain = -compassBoundary(true_north_heading - hold_rotation);
-                        if ((angle_remain <= angle_tolarence) && (angle_remain >= -angle_tolarence)) 
+                        if (video_saved == true)
                         {
-                            System.Diagnostics.Debug.WriteLine("Rotation completed");
-                            System.Diagnostics.Debug.WriteLine("Pitching...");
-                            pitch = 0.5f;
-                            mission_state++;
+                            if (Math.Round(currentAltitude, 1) <= 0.7)
+                            {
+                                Attitude_control();
+                                StartRecording();
+                                mission_state++;
+                            }
+                            else
+                            {
+                                throttle = throttlePID.get(0.7 - currentAltitude);
+                                System.Diagnostics.Debug.WriteLine("Going down to 0.7...throttle:{0}", throttle);
+                            }
                         }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine("Rotating...{0}degree left", angle_remain);
-                        }
-                        System.Diagnostics.Debug.WriteLine("YAW ={0}", yaw);
                         break;
                     }
                 case 4:     //go to WP2
@@ -1040,53 +1098,205 @@ namespace WSDKTest
                         if (myWP[2].compare(current2Dpostion) <= myWP[2].tolarence)
                         {
                             System.Diagnostics.Debug.WriteLine("WP2 arrived");
-                            pitch = 0;
-                            System.Diagnostics.Debug.WriteLine("Rolling...");
-                            roll = 0.5f;
+                            Attitude_control();
+                            StopRecording();
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
+                            //mission_state=5;
+                            mission_state++;
+                        }
+                        else
+                        {
+                            roll = -max_speed;
+                            pitch = -pitchPID.get(myWP[2].offsetFromPath(myWP[1], current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
+                            System.Diagnostics.Debug.WriteLine("Flying to WP2, distance = {0}", myWP[2].compare(current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[2].offsetFromPath(myWP[1], current2Dpostion));
+                        }
+                        break;
+                    }
+                case 5:     //down to 0.2
+                    {
+                        if (video_saved == true)
+                        {
+                            if (currentAltitude <= 0.2)
+                            {
+                                Attitude_control();
+                                StartRecording();
+                                mission_state++;
+                            }
+                            else
+                            {
+                                throttle = throttlePID.get(0.2 - currentAltitude);
+                                System.Diagnostics.Debug.WriteLine("Going down to 0.2...throttle:{0}", throttle);
+                            }
+                        }
+                        break;
+                    }
+                case 6:     //go to WP3
+                    {
+                        if (myWP[3].compare(current2Dpostion) <= myWP[3].tolarence)
+                        {
+                            System.Diagnostics.Debug.WriteLine("WP3 arrived");
+                            Attitude_control();
+                            StopRecording();
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
+                            //mission_state++;
+                            mission_state=13;
+                        }
+                        else
+                        {
+                            roll = max_speed;
+                            pitch = pitchPID.get(myWP[3].offsetFromPath(myWP[2], current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
+                            System.Diagnostics.Debug.WriteLine("Flying to WP1, distance = {0}", myWP[3].compare(current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[3].offsetFromPath(myWP[2], current2Dpostion));
+                        }
+                        break;
+                    }
+                case 7:     //rotate 180degree
+                    {
+                        System.Diagnostics.Debug.WriteLine("change hold rotation from {0} to {1}", hold_rotation, CompassBoundary(hold_rotation + 180.0));
+                        if (first_time == true)
+                        {
+                            hold_rotation = CompassBoundary(hold_rotation + 180.0);
+                            first_time = false;
+                        }
+
+                        angle_remain = -CompassBoundary(hold_rotation - true_north_heading);
+                        System.Diagnostics.Debug.WriteLine("{0} degree left", angle_remain);
+                        if ((angle_remain <= angle_tolarence) && (angle_remain >= -angle_tolarence))
+                        {
+                            System.Diagnostics.Debug.WriteLine("rotation completed");
+                            if (video_saved == true)
+                            {
+                                StartRecording();
+                                mission_state++;
+                            }
+                        }
+                        break;
+                    }
+                case 8:     //go to WP4
+                    {
+                        if (myWP[4].compare(current2Dpostion) <= myWP[4].tolarence)
+                        {
+                            System.Diagnostics.Debug.WriteLine("WP4 arrived");
+                            Attitude_control();
+                            StopRecording();
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
                             mission_state++;
                         }
                         else
                         {
-                            roll = rollPID.get(myWP[2].offsetFromPath(myWP[1], current2Dpostion));
-                            System.Diagnostics.Debug.WriteLine("Flying to WP2, distance = {0}", myWP[2].compare(current2Dpostion));
-                            System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[2].offsetFromPath(myWP[1], current2Dpostion));
-                            System.Diagnostics.Debug.WriteLine("current postion {0}, {1}", current2Dpostion.x, current2Dpostion.y);
-                            System.Diagnostics.Debug.WriteLine("target postion {0}, {1}", myWP[2].x, myWP[2].y);
+                            roll = max_speed;
+                            pitch = pitchPID.get(myWP[4].offsetFromPath(myWP[3], current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
+                            System.Diagnostics.Debug.WriteLine("Flying to WP1, distance = {0}", myWP[4].compare(current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[4].offsetFromPath(myWP[3], current2Dpostion));
                         }
                         break;
                     }
-                case 5:     //go to WP3
+                case 9:     //rise to 0.7
                     {
-                        if (myWP[3].compare(current2Dpostion) <= myWP[3].tolarence)
+                        if (video_saved == true)
                         {
-                            System.Diagnostics.Debug.WriteLine("WP3 arrived");
-                            roll = 0;
-                            pitch = 0;
+                            if (Math.Round(currentAltitude, 1) >= 0.7)
+                            {
+                                Attitude_control();
+                                StartRecording();
+                                mission_state++;
+                            }
+                            else
+                            {
+                                throttle = throttlePID.get(0.7 - currentAltitude);
+                                System.Diagnostics.Debug.WriteLine("Going Up to 0.7...throttle:{0}", throttle);
+                            }
+                        }
+                        break;
+                    }
+                case 10:    //go to WP5
+                    {
+                        if (myWP[5].compare(current2Dpostion) <= myWP[5].tolarence)
+                        {
+                            System.Diagnostics.Debug.WriteLine("WP5 arrived");
+                            Attitude_control();
+                            StopRecording();
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
                             mission_state++;
                         }
                         else
                         {
-                            pitch = pitchPID.get(myWP[3].offsetFromPath(myWP[2], current2Dpostion));
-                            System.Diagnostics.Debug.WriteLine("Flying to WP3, distance = {0}", myWP[3].compare(current2Dpostion));
-                            System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[3].offsetFromPath(myWP[2], current2Dpostion));
+                            roll = -max_speed;
+                            pitch = -pitchPID.get(myWP[5].offsetFromPath(myWP[4], current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
+                            System.Diagnostics.Debug.WriteLine("Flying to WP2, distance = {0}", myWP[5].compare(current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[5].offsetFromPath(myWP[4], current2Dpostion));
                         }
                         break;
                     }
-                case 6:
+                case 11:    //rise to 1.2
                     {
-                        System.Diagnostics.Debug.WriteLine("Mission Completed. Press H to land");
+                        if (video_saved == true)
+                        {
+                            if (currentAltitude >= 1.2)
+                            {
+                                Attitude_control();
+                                StartRecording();
+                                mission_state++;
+                            }
+                            else
+                            {
+                                throttle = throttlePID.get(1.2 - currentAltitude);
+                                System.Diagnostics.Debug.WriteLine("Going up to 1.2...throttle:{0}", throttle);
+                            }
+                        }
+                        break;
+                    }
+                case 12:    //go to WP6
+                    {
+                        if (myWP[6].compare(current2Dpostion) <= myWP[6].tolarence)
+                        {
+                            System.Diagnostics.Debug.WriteLine("WP4 arrived");
+                            Attitude_control();
+                            StopRecording();
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
+                            mission_state++;
+                        }
+                        else
+                        {
+                            roll = max_speed;
+                            pitch = pitchPID.get(myWP[6].offsetFromPath(myWP[5], current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
+                            System.Diagnostics.Debug.WriteLine("Flying to WP1, distance = {0}", myWP[6].compare(current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[6].offsetFromPath(myWP[5], current2Dpostion));
+                        }
+                        break;
+                    }
+                case 13:    //wait for saving
+                    {
+                        if (video_saved == true)
+                            mission_state++;
+                        break;
+                    }
+                case 14:
+                    {
+                        var res = await DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).StartAutoLandingAsync();
+                        System.Diagnostics.Debug.WriteLine("Mission Completed. Press H to land. It will auto land anyway");
+                        System.Diagnostics.Debug.WriteLine("Result: {0}", Textbox.Text);
                         break;
                     }
                 default:
                     {
+                        //StopRecording();
                         System.Diagnostics.Debug.WriteLine("Mission Inpterrupted");
                         break;
                     }
             }
             //periodically adjust yaw angle
-            yaw = yawPID.get(hold_rotation - true_north_heading);
-
+            if (!fast_yaw)
+                yaw = yawPID.get(hold_rotation - true_north_heading);
+            else
+                yaw = fastyawPID.get(hold_rotation - true_north_heading);
+            //System.Diagnostics.Debug.WriteLine("yaw = {0}", yaw);
             if (DJISDKManager.Instance != null)
                 DJISDKManager.Instance.VirtualRemoteController.UpdateJoystickValue(throttle, yaw, pitch, roll);
 
