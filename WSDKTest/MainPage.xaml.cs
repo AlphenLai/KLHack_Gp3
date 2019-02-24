@@ -219,7 +219,6 @@ namespace WSDKTest
 
         private async void Stop_Button_Click(object sender, RoutedEventArgs e)
         {
-            SaveResult(Textbox.Text.ToString());
             string command = @"C:\Users\USER\AppData\Local\Packages\Sample_82w491b8nw3hm\LocalState\testpy.py";
 
             var options = new Windows.System.LauncherOptions();
@@ -295,7 +294,7 @@ namespace WSDKTest
         static double D_position;
         static double Y_offset = 0;
         static double X_offset = 0;
-        static double WP_tolarence = 0.07f;
+        static double WP_tolarence = 1.0f;
         static double angle_tolarence = 0.2f;
         static float max_yaw_speed = 0.3f;
         static float max_speed = 0.2f;
@@ -417,7 +416,7 @@ namespace WSDKTest
         static PID pitchPID = new PID(1.01, 0.1, 0.11, max_speed);
         static PID yawPID = new PID(0.00104, 0.001, 0.0045, max_yaw_speed);
         static PID throttlePID = new PID(1.5, 0, 0.1, max_vert_speed);
-        static PID fastyawPID = new PID(2, 0, 0.1, 0.5f);
+        static PID fastyawPID = new PID(150, 20, 20, 0.9f);
 
         public static double CompassBoundary(double compassValue)
         {
@@ -461,7 +460,7 @@ namespace WSDKTest
             myWP[0].rotation = CompassBoundary(0.0f + local_heading);
             myWP[0].tolarence = WP_tolarence;
 
-            temp_wp = RotationMatrix(new Position(2.0, 0), CompassBoundary(-local_heading));
+            temp_wp = RotationMatrix(new Position(5.0, 0), CompassBoundary(-local_heading));
             myWP[1].x = temp_wp.x;
             myWP[1].y = temp_wp.y;
             myWP[1].rotation = CompassBoundary(0.0f + local_heading);
@@ -473,7 +472,7 @@ namespace WSDKTest
             myWP[2].rotation = CompassBoundary(0.0f + local_heading);
             myWP[2].tolarence = WP_tolarence;
 
-            temp_wp = RotationMatrix(new Position(2.0, 0), CompassBoundary(-local_heading));
+            temp_wp = RotationMatrix(new Position(5.0, 0), CompassBoundary(-local_heading));
             myWP[3].x = temp_wp.x;
             myWP[3].y = temp_wp.y;
             myWP[3].rotation = CompassBoundary(180.0f + local_heading);
@@ -485,7 +484,7 @@ namespace WSDKTest
             myWP[4].rotation = CompassBoundary(180.0f + local_heading);
             myWP[4].tolarence = WP_tolarence;
 
-            temp_wp = RotationMatrix(new Position(2.0, 0), CompassBoundary(-local_heading));
+            temp_wp = RotationMatrix(new Position(5.0, 0), CompassBoundary(-local_heading));
             myWP[5].x = temp_wp.x;
             myWP[5].y = temp_wp.y;
             myWP[5].rotation = CompassBoundary(180.0f + local_heading);
@@ -510,13 +509,6 @@ namespace WSDKTest
             StorageFile sampleFile = await myfolder.CreateFileAsync(filename_img, CreationCollisionOption.ReplaceExisting);
             byte[] jpg_buffer = await EncodeJpeg(bmp);
             await FileIO.WriteBytesAsync(sampleFile, jpg_buffer);
-        }
-        private async void SaveResult(string result)
-        {
-            string filename_csv = "result.csv";
-            StorageFolder myfolder2 = await Windows.Storage.ApplicationData.Current.LocalFolder.CreateFolderAsync("Doc", CreationCollisionOption.OpenIfExists);
-            StorageFile sampleFile2 = await myfolder2.CreateFileAsync(filename_csv, CreationCollisionOption.ReplaceExisting);
-            File.WriteAllText(filename_csv, result);
         }
         private async Task<byte[]> EncodeJpeg(WriteableBitmap bmp)
         {
@@ -1064,6 +1056,7 @@ namespace WSDKTest
                             StopRecording();
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
                             mission_state++;
+                            //mission_state = 7;
                         }
                         else
                         {
@@ -1140,40 +1133,49 @@ namespace WSDKTest
                             Attitude_control();
                             StopRecording();
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
-                            //mission_state++;
-                            mission_state=13;
+                            mission_state++;
+                            //mission_state=13;
                         }
                         else
                         {
                             roll = max_speed;
                             pitch = pitchPID.get(myWP[3].offsetFromPath(myWP[2], current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("current position {0}, {1}", current2Dpostion.x, current2Dpostion.y);
-                            System.Diagnostics.Debug.WriteLine("Flying to WP1, distance = {0}", myWP[3].compare(current2Dpostion));
+                            System.Diagnostics.Debug.WriteLine("Flying to WP3, distance = {0}", myWP[3].compare(current2Dpostion));
                             System.Diagnostics.Debug.WriteLine("Perpendicular distance = {0}", myWP[3].offsetFromPath(myWP[2], current2Dpostion));
                         }
                         break;
                     }
                 case 7:     //rotate 180degree
                     {
-                        System.Diagnostics.Debug.WriteLine("change hold rotation from {0} to {1}", hold_rotation, CompassBoundary(hold_rotation + 180.0));
-                        if (first_time == true)
-                        {
-                            hold_rotation = CompassBoundary(hold_rotation + 180.0);
-                            first_time = false;
-                        }
-
-                        angle_remain = -CompassBoundary(hold_rotation - true_north_heading);
-                        System.Diagnostics.Debug.WriteLine("{0} degree left", angle_remain);
+                        //old codes on auto
+                        float progressionYaw;
+                        angle_remain = -CompassBoundary(true_north_heading - 180.0);
                         if ((angle_remain <= angle_tolarence) && (angle_remain >= -angle_tolarence))
                         {
-                            System.Diagnostics.Debug.WriteLine("rotation completed");
-                            if (video_saved == true)
-                            {
-                                StartRecording();
-                                mission_state++;
-                            }
+                            fast_yaw = false;
+                            System.Diagnostics.Debug.WriteLine("Rotation completed");
+                            Attitude_control();
+                            StartRecording();
+                            mission_state++;
                         }
-                        break;
+                        else if (Math.Abs(angle_remain) <= 10.0f)
+                        {
+                            progressionYaw = Convert.ToSingle((0.2f * angle_remain / 5.0f) + Math.Sign(angle_remain) * 0.1);
+                            yaw = progressionYaw;
+                            angle_remain = -CompassBoundary(hold_rotation - true_north_heading);
+                            if ((angle_remain < 0) && (yaw > 0))
+                                yaw *= -1;
+                            else if ((angle_remain > 0) && (yaw <= 0))
+                                yaw *= -1;
+                            System.Diagnostics.Debug.WriteLine("{0} degree left", angle_remain);
+                        }
+                        else
+                        {
+                            fast_yaw = true;
+                            yaw = 0.2f;
+                        }
+                            break; 
                     }
                 case 8:     //go to WP4
                     {
@@ -1281,7 +1283,7 @@ namespace WSDKTest
                     {
                         var res = await DJISDKManager.Instance.ComponentManager.GetFlightControllerHandler(0, 0).StartAutoLandingAsync();
                         System.Diagnostics.Debug.WriteLine("Mission Completed. Press H to land. It will auto land anyway");
-                        System.Diagnostics.Debug.WriteLine("Result: {0}", Textbox.Text);
+                        System.Diagnostics.Debug.WriteLine("Result: "+ Textbox.Text.ToString());
                         break;
                     }
                 default:
@@ -1294,9 +1296,9 @@ namespace WSDKTest
             //periodically adjust yaw angle
             if (!fast_yaw)
                 yaw = yawPID.get(hold_rotation - true_north_heading);
-            else
-                yaw = fastyawPID.get(hold_rotation - true_north_heading);
-            //System.Diagnostics.Debug.WriteLine("yaw = {0}", yaw);
+            //else
+            //    yaw = fastyawPID.get(hold_rotation - true_north_heading);
+            System.Diagnostics.Debug.WriteLine("yaw = {0}", yaw);
             if (DJISDKManager.Instance != null)
                 DJISDKManager.Instance.VirtualRemoteController.UpdateJoystickValue(throttle, yaw, pitch, roll);
 
